@@ -37,6 +37,8 @@ yarn-error.log*
 # Claude Code / MCP configuration (IDE-specific, not needed for contributors)
 .mcp.json
 /.claude/
+/.agents/
+skills-lock.json
 
 # playwright mcp screenshots
 .playwright-mcp/
