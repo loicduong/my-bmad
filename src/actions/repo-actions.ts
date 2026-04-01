@@ -611,7 +611,7 @@ export async function updateRepoBranch(input: {
       data: { branch: parsed.data.branch },
     });
 
-    revalidateTag(repoTag(parsed.data.owner, parsed.data.name));
+    revalidateTag(repoTag(parsed.data.owner, parsed.data.name), "default");
     revalidatePath("/(dashboard)");
 
     return { success: true, data: { branch: parsed.data.branch } };
