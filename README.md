@@ -1,23 +1,51 @@
 # MyBMAD Dashboard
 
-A web dashboard to visualize and track [BMAD (Breakthrough Method of Agile AI-Driven Development)](https://github.com/bmad-method/bmad-method) projects from your GitHub repositories.
+A web dashboard to visualize and track [BMAD (Breakthrough Method of Agile AI-Driven Development)](https://github.com/bmad-method/bmad-method) projects from your GitHub repositories — or directly from local folders.
 
 > **License:** GNU AGPL v3 — see [LICENSE](./LICENSE) for details.
 
 ---
 
+## Table of Contents
+
+- [What is MyBMAD Dashboard?](#what-is-mybmad-dashboard)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Local Development](#local-development)
+  - [1. Clone the repository](#1-clone-the-repository)
+  - [2. Install dependencies](#2-install-dependencies)
+  - [3. Set up environment variables](#3-set-up-environment-variables)
+  - [4. Start PostgreSQL with Docker Compose](#4-start-postgresql-with-docker-compose-optional)
+  - [5. Run database migrations](#5-run-database-migrations)
+  - [6. Create your first account](#6-create-your-first-account)
+  - [7. Start the development server](#7-start-the-development-server)
+- [Environment Variables Reference](#environment-variables-reference)
+- [Local Folder Import](#local-folder-import)
+- [Project Structure](#project-structure)
+- [Available Scripts](#available-scripts)
+- [Production Deployment (Docker)](#production-deployment-docker)
+- [Configuration](#configuration)
+- [API Endpoints](#api-endpoints)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
+
+---
+
 ## What is MyBMAD Dashboard?
 
-MyBMAD Dashboard connects to your GitHub repositories, reads the BMAD project structure (epics, stories, sprint status, docs), and displays everything in a clean, real-time dashboard. It is designed for solo developers and small teams who use the BMAD methodology with AI coding agents.
+MyBMAD Dashboard connects to your GitHub repositories (or local folders), reads the BMAD project structure (epics, stories, sprint status, docs), and displays everything in a clean, real-time dashboard. It is designed for solo developers and small teams who use the BMAD methodology with AI coding agents.
 
 **Key features:**
 - Import any GitHub repository that follows the BMAD structure
+- **Import local folders** — no GitHub needed for self-hosted setups (see [Local Folder Import](#local-folder-import))
 - Visualize epic progress and story status at a glance
 - Support for chunked epics (individual files in `epics/` directory) as well as a single `epics.md`
 - Browse BMAD docs and planning artifacts directly in the app
 - Track sprint status and velocity metrics
 - Repo settings modal to switch branches directly from the UI
-- GitHub OAuth authentication (login with your GitHub account)
+- Email/password authentication and optional GitHub OAuth login
 - Multi-user support with role management (admin / user)
 - Self-hostable with Docker and automatic TLS via Traefik
 
@@ -52,9 +80,9 @@ MyBMAD Dashboard connects to your GitHub repositories, reads the BMAD project st
 
 - **Node.js** 20+
 - **pnpm** 9+
-- **PostgreSQL** 15+ (or use Docker Compose)
-- A **GitHub OAuth App** ([create one here](https://github.com/settings/developers))
-- A **GitHub Personal Access Token** (optional but recommended for rate limits)
+- **Docker** (for PostgreSQL, or use your own PostgreSQL 15+ instance)
+- A **GitHub OAuth App** — optional, only needed for GitHub login ([create one here](https://github.com/settings/developers))
+- A **GitHub Personal Access Token** — optional but recommended for rate limits when importing GitHub repos
 
 ---
 
@@ -114,7 +142,7 @@ Paste the output as the value. Any long random string works.
 The base URL where your app runs. For local development:
 
 ```
-BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3002
 ```
 
 In production, set this to your real domain (e.g. `https://mybmad.example.com`).
@@ -135,8 +163,8 @@ Required for "Login with GitHub". Follow these steps:
 2. Click **New OAuth App**
 3. Fill in the form:
    - **Application name:** `MyBMAD` (or anything you like)
-   - **Homepage URL:** `http://localhost:3000`
-   - **Authorization callback URL:** `http://localhost:3000/api/auth/callback/github`
+   - **Homepage URL:** `http://localhost:3002`
+   - **Authorization callback URL:** `http://localhost:3002/api/auth/callback/github`
 4. Click **Register application**
 5. Copy the **Client ID** into `GITHUB_CLIENT_ID`
 6. Click **Generate a new client secret**, copy it into `GITHUB_CLIENT_SECRET`
@@ -157,10 +185,10 @@ Without a PAT, the GitHub API allows only 60 requests/hour. With one, you get 5,
 If you don't have a local PostgreSQL instance:
 
 ```bash
-docker compose up -d postgres
+docker compose up -d
 ```
 
-This starts a PostgreSQL instance on port `5433` (as configured in `.env.example`).
+This starts a PostgreSQL instance on port `5433` (to avoid conflicts with a local PostgreSQL on 5432).
 
 ### 5. Run database migrations
 
@@ -168,13 +196,90 @@ This starts a PostgreSQL instance on port `5433` (as configured in `.env.example
 pnpm db:migrate
 ```
 
-### 6. Start the development server
+### 6. Create your first account
+
+**Option A** — enable registration in `.env`, then sign up from the web UI:
+
+```
+ALLOW_REGISTRATION=true
+```
+
+After creating your account, you can set it back to `false`.
+
+**Option B** — create an admin directly from the command line:
+
+```bash
+pnpm db:create-admin --email admin@example.com --password your_password --name Admin
+```
+
+### 7. Start the development server
 
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — log in with GitHub and start importing repositories.
+Open [http://localhost:3002](http://localhost:3002) — log in and start importing repositories.
+
+> **Note:** The dev server runs on port **3002** (configured in `package.json`). If you set up GitHub OAuth, make sure the callback URL matches this port.
+
+---
+
+## Environment Variables Reference
+
+| Variable | Required | Default / How to generate | Description |
+|---|---|---|---|
+| `DATABASE_URL` | Yes | `postgresql://bmad:bmad_dev_password@localhost:5433/bmad_dashboard` | PostgreSQL connection string. Works out of the box with the included Docker Compose. |
+| `BETTER_AUTH_SECRET` | Yes | `openssl rand -base64 32` | Random string to sign session tokens. |
+| `BETTER_AUTH_URL` | Yes | `http://localhost:3002` | Base URL where the app is running. |
+| `REVALIDATE_SECRET` | Yes | `openssl rand -hex 32` | Secret to protect the cache revalidation endpoint. |
+| `GITHUB_CLIENT_ID` | No | — | GitHub OAuth App Client ID. Only needed for "Login with GitHub". |
+| `GITHUB_CLIENT_SECRET` | No | — | GitHub OAuth App Client Secret. |
+| `GITHUB_PAT` | No | — | Personal Access Token for higher GitHub API rate limits (60 → 5,000 req/h). |
+| `ALLOW_REGISTRATION` | No | `false` | Set to `true` to allow new users to sign up via email/password. |
+| `ENABLE_LOCAL_FS` | No | `false` | Set to `true` to enable [local folder imports](#local-folder-import). |
+
+> The `scripts/setup.sh` script auto-generates `BETTER_AUTH_SECRET` and `REVALIDATE_SECRET` for you.
+
+---
+
+## Local Folder Import
+
+When self-hosting MyBMAD on the same machine where your BMAD projects live, you can import them directly from the filesystem — no GitHub needed.
+
+### Enabling
+
+Set the following in your `.env`:
+
+```
+ENABLE_LOCAL_FS=true
+```
+
+Restart the dev server after changing this value.
+
+### How it works
+
+1. Click **"Add a project"** in the dashboard
+2. A **"Local Folder"** tab appears alongside the GitHub tab
+3. Enter the **absolute path** to your project folder (e.g. `/home/user/my-project`)
+4. The system validates that the folder contains a `_bmad/` or `_bmad-output/` directory
+5. The project is imported and appears in your dashboard just like a GitHub repo
+
+Once imported, you can browse epics, stories, and docs exactly as you would with a GitHub project. Use the **Refresh** action to re-scan the folder when files change.
+
+### Security
+
+The local provider includes multiple safety guards:
+- **Path traversal protection** — rejects `..`, null bytes, and special characters
+- **No symlink access** — symbolic links are skipped at every level
+- **File size limit** — 10 MB per file (prevents memory exhaustion)
+- **File count limit** — 10,000 files max per project
+- **Depth limit** — 20 directory levels max
+
+### Limitations
+
+- Only works when the Next.js server runs on the **same machine** as the project files
+- No branch/version support — local folders are a live snapshot
+- If you move or rename the folder, you need to re-import it
 
 ---
 
@@ -231,6 +336,7 @@ pnpm db:generate      # Generate Prisma client
 pnpm db:migrate       # Run database migrations (dev)
 pnpm db:push          # Push schema changes without migration
 pnpm db:studio        # Open Prisma Studio (database GUI)
+pnpm db:create-admin  # Create an admin user from the CLI
 ```
 
 ---
