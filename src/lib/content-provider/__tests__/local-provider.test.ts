@@ -110,27 +110,45 @@ describe("LocalProvider", () => {
 
   describe("getFileContent()", () => {
     it("returns the correct file content", async () => {
-      await writeFile("hello.txt", "Hello World");
+      await writeFile("_bmad/hello.txt", "Hello World");
 
       const provider = new LocalProvider(tmpDir);
-      const content = await provider.getFileContent("hello.txt");
+      const content = await provider.getFileContent("_bmad/hello.txt");
 
       expect(content).toBe("Hello World");
     });
 
     it("throws for non-existent file", async () => {
       const provider = new LocalProvider(tmpDir);
-      await expect(provider.getFileContent("nope.txt")).rejects.toThrow();
+      await expect(provider.getFileContent("_bmad/nope.txt")).rejects.toThrow();
     });
 
     it("throws for files exceeding size limit", async () => {
       const bigContent = "x".repeat(100);
-      await writeFile("big.txt", bigContent);
+      await writeFile("_bmad/big.txt", bigContent);
 
       const provider = new LocalProvider(tmpDir, { maxFileSizeBytes: 50 });
-      await expect(provider.getFileContent("big.txt")).rejects.toThrow(
+      await expect(provider.getFileContent("_bmad/big.txt")).rejects.toThrow(
         "exceeds limit"
       );
+    });
+
+    it("rejects access to files outside BMAD directories", async () => {
+      await writeFile("secrets.env", "API_KEY=hunter2");
+
+      const provider = new LocalProvider(tmpDir);
+      await expect(provider.getFileContent("secrets.env")).rejects.toThrow(
+        "Access denied: only BMAD directories are accessible"
+      );
+    });
+
+    it("allows access to _bmad-output files", async () => {
+      await writeFile("_bmad-output/report.md", "# Report");
+
+      const provider = new LocalProvider(tmpDir);
+      const content = await provider.getFileContent("_bmad-output/report.md");
+
+      expect(content).toBe("# Report");
     });
   });
 });

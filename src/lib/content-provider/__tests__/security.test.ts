@@ -81,11 +81,11 @@ describe("LocalProvider Security", () => {
       const outsideFile = path.join(os.tmpdir(), "outside-secret.txt");
       await fs.writeFile(outsideFile, "secret");
 
-      const symlinkPath = path.join(tmpDir, "link.txt");
+      const symlinkPath = path.join(tmpDir, "_bmad", "link.txt");
       await fs.symlink(outsideFile, symlinkPath);
 
       const provider = new LocalProvider(tmpDir);
-      await expect(provider.getFileContent("link.txt")).rejects.toThrow(
+      await expect(provider.getFileContent("_bmad/link.txt")).rejects.toThrow(
         "Symlinks are not allowed"
       );
 
@@ -112,12 +112,12 @@ describe("LocalProvider Security", () => {
   describe("File size limit", () => {
     it("rejects files exceeding maxFileSizeBytes", async () => {
       await fs.writeFile(
-        path.join(tmpDir, "big.txt"),
+        path.join(tmpDir, "_bmad", "big.txt"),
         "x".repeat(200)
       );
 
       const provider = new LocalProvider(tmpDir, { maxFileSizeBytes: 100 });
-      await expect(provider.getFileContent("big.txt")).rejects.toThrow(
+      await expect(provider.getFileContent("_bmad/big.txt")).rejects.toThrow(
         "exceeds limit"
       );
     });
