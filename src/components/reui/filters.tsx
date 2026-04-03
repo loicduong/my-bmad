@@ -1436,7 +1436,6 @@ export function Filters<T = unknown>({
     }
   }, [highlightedIndex, addFilterOpen, rootId])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- ReUI third-party code
   useEffect(() => {
     if (!addFilterOpen) {
       setOpenSubMenu(null)
@@ -1535,7 +1534,6 @@ export function Filters<T = unknown>({
     )
   }, [selectableFields, menuSearchInput])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- ReUI third-party code
   useEffect(() => {
     if (addFilterOpen && filteredFields.length > 0) {
       setHighlightedIndex(0)
