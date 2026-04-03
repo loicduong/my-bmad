@@ -129,6 +129,11 @@ export function UsersTable({ users, currentUserId }: UsersTableProps) {
 
   const columns = useMemo(() => makeColumns(currentUserId), [currentUserId]);
 
+  const columnFilters = useMemo(
+    () => (search ? [{ id: "name", value: search }] : []),
+    [search]
+  );
+
   const table = useReactTable({
     data: users,
     columns,
@@ -138,9 +143,7 @@ export function UsersTable({ users, currentUserId }: UsersTableProps) {
     onSortingChange: setSorting,
     state: {
       sorting,
-      columnFilters: search
-        ? [{ id: "name", value: search }]
-        : [],
+      columnFilters,
     },
   });
 

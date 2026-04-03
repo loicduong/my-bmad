@@ -1436,11 +1436,13 @@ export function Filters<T = unknown>({
     }
   }, [highlightedIndex, addFilterOpen, rootId])
 
-  useEffect(() => {
+  const prevAddFilterOpen = useRef(addFilterOpen)
+  if (prevAddFilterOpen.current !== addFilterOpen) {
+    prevAddFilterOpen.current = addFilterOpen
     if (!addFilterOpen) {
       setOpenSubMenu(null)
     }
-  }, [addFilterOpen])
+  }
 
   // Track which filter instance is being built in the current Add Filter menu session
   // Maps fieldKey -> unique filterId created during this open session
@@ -1534,11 +1536,16 @@ export function Filters<T = unknown>({
     )
   }, [selectableFields, menuSearchInput])
 
-  useEffect(() => {
+  const prevFilterState = useRef({ addFilterOpen, filteredFieldsLength: filteredFields.length })
+  if (
+    prevFilterState.current.addFilterOpen !== addFilterOpen ||
+    prevFilterState.current.filteredFieldsLength !== filteredFields.length
+  ) {
+    prevFilterState.current = { addFilterOpen, filteredFieldsLength: filteredFields.length }
     if (addFilterOpen && filteredFields.length > 0) {
       setHighlightedIndex(0)
     }
-  }, [addFilterOpen, filteredFields.length])
+  }
 
   return (
     <FilterContext.Provider
