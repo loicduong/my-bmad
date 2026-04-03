@@ -6,6 +6,7 @@ import { LayoutList, Columns3 } from "lucide-react";
 import { StoryFilters, type Filter } from "./story-filters";
 import { StoriesTable } from "./stories-table";
 import { KanbanBoard } from "./kanban-board";
+import { StaggeredList, StaggeredItem } from "@/components/shared/staggered-list";
 import type { StoryDetail, Epic } from "@/lib/bmad/types";
 
 interface StoriesViewProps {
@@ -57,8 +58,8 @@ export function StoriesView({ stories, epics }: StoriesViewProps) {
   }, [stories, search, applyFilters]);
 
   return (
-    <div className="space-y-4" role="region" aria-label="Stories list">
-      <div className="flex items-center justify-between gap-4">
+    <StaggeredList className="space-y-4" role="region" aria-label="Stories list" staggerDelay={0.1}>
+      <StaggeredItem className="flex items-center justify-between gap-4">
         <StoryFilters
           search={search}
           onSearchChange={setSearch}
@@ -88,13 +89,15 @@ export function StoriesView({ stories, epics }: StoriesViewProps) {
             <span className="hidden sm:inline">Board</span>
           </Button>
         </div>
-      </div>
+      </StaggeredItem>
 
-      {view === "table" ? (
-        <StoriesTable stories={filtered} />
-      ) : (
-        <KanbanBoard stories={filtered} />
-      )}
-    </div>
+      <StaggeredItem>
+        {view === "table" ? (
+          <StoriesTable stories={filtered} />
+        ) : (
+          <KanbanBoard stories={filtered} />
+        )}
+      </StaggeredItem>
+    </StaggeredList>
   );
 }

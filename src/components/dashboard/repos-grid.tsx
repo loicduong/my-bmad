@@ -1,5 +1,6 @@
 import { RepoCard } from "./repo-card";
 import { AddRepoCard } from "./add-repo-card";
+import { StaggeredList, StaggeredItem } from "@/components/shared/staggered-list";
 import type { BmadProject } from "@/lib/bmad/types";
 import type { RepoConfig } from "@/lib/types";
 
@@ -43,15 +44,18 @@ export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled }: Re
   );
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <StaggeredList className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initialDelay={0.2} staggerDelay={0.08}>
       {projects.map((project) => (
-        <RepoCard
-          key={`${project.owner}/${project.repo}`}
-          project={project}
-          description={descriptionMap.get(`${project.owner}/${project.repo}`) ?? null}
-        />
+        <StaggeredItem key={`${project.owner}/${project.repo}`}>
+          <RepoCard
+            project={project}
+            description={descriptionMap.get(`${project.owner}/${project.repo}`) ?? null}
+          />
+        </StaggeredItem>
       ))}
-      <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} />
-    </div>
+      <StaggeredItem>
+        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} />
+      </StaggeredItem>
+    </StaggeredList>
   );
 }

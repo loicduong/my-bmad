@@ -52,7 +52,7 @@ function TaskGauge({ completed, total }: { completed: number; total: number }) {
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={`${filledLength} ${remainingLength}`}
-            className={percent >= 1 ? "text-emerald-500" : "text-emerald-400"}
+            className={percent >= 1 ? "text-success" : "text-success/70"}
           />
         )}
       </svg>

@@ -31,7 +31,7 @@ export default async function DashboardLayout({
       <SidebarProvider>
         <AppSidebar
           repos={repos}
-          userRole={session.role}
+          userEmail={session.email}
           localFsEnabled={localFsEnabled}
           githubEnabled={hasGitHubToken}
         />

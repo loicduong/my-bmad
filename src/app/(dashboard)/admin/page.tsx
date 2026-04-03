@@ -4,20 +4,11 @@ import { redirect } from "next/navigation";
 import { getUsers, getUsageMetrics } from "@/actions/admin-actions";
 import { UsageMetrics } from "@/components/admin/usage-metrics";
 import { UsersTable } from "@/components/admin/users-table";
-import { AlertCircle } from "lucide-react";
+import { AlertBanner } from "@/components/shared/alert-banner";
 
 export const metadata: Metadata = {
   title: "Administration",
 };
-
-function ErrorAlert({ message }: { message: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-      <AlertCircle className="h-4 w-4 shrink-0" />
-      <span>{message}</span>
-    </div>
-  );
-}
 
 export default async function AdminPage() {
   const session = await getAuthenticatedSession();
@@ -49,13 +40,13 @@ export default async function AdminPage() {
           parsingErrorRate={metricsResult.data.parsingErrorRate}
         />
       ) : (
-        <ErrorAlert message={`Failed to load metrics: ${metricsResult.error}`} />
+        <AlertBanner variant="error" title={`Failed to load metrics: ${metricsResult.error}`} />
       )}
 
       {usersResult.success ? (
         <UsersTable users={usersResult.data} currentUserId={session.userId} />
       ) : (
-        <ErrorAlert message={`Failed to load users: ${usersResult.error}`} />
+        <AlertBanner variant="error" title={`Failed to load users: ${usersResult.error}`} />
       )}
       </div>
     </div>

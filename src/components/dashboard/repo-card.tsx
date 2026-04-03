@@ -13,9 +13,9 @@ interface RepoCardProps {
 }
 
 function getBarColor(percent: number) {
-  if (percent >= 75) return "bg-emerald-500";
-  if (percent >= 40) return "bg-amber-500";
-  return "bg-rose-500";
+  if (percent >= 75) return "bg-success";
+  if (percent >= 40) return "bg-warning";
+  return "bg-destructive";
 }
 
 function EpicSummaryRow({ epic }: { epic: Epic }) {
@@ -98,12 +98,12 @@ export function RepoCard({ project, description }: RepoCardProps) {
           </div>
           <div className="mt-3 flex gap-2 flex-wrap">
             {project.completedStories > 0 && (
-              <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/25 text-xs">
+              <Badge variant="outline" className="bg-success/15 text-success-foreground border-success/25 text-xs">
                 {project.completedStories} completed
               </Badge>
             )}
             {project.inProgressStories > 0 && (
-              <Badge variant="outline" className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/25 text-xs">
+              <Badge variant="outline" className="bg-info/15 text-info-foreground border-info/25 text-xs">
                 {project.inProgressStories} in progress
               </Badge>
             )}

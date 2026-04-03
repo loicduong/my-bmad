@@ -30,7 +30,7 @@ export function ParseErrorsDialog({ errors }: ParseErrorsDialogProps) {
           <DialogTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center text-amber-500 hover:text-amber-400 transition-colors duration-300"
+              className="inline-flex items-center text-warning hover:text-warning-foreground transition-colors duration-300"
               onClick={(e) => e.stopPropagation()}
               aria-label={`${errors.length} file(s) with parsing errors`}
             >
@@ -44,7 +44,7 @@ export function ParseErrorsDialog({ errors }: ParseErrorsDialogProps) {
       </Tooltip>
       <DialogContent className="glass-card max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-500">
+          <DialogTitle className="flex items-center gap-2 text-warning">
             <AlertTriangle className="h-5 w-5" />
             Parsing Errors
           </DialogTitle>
@@ -53,9 +53,9 @@ export function ParseErrorsDialog({ errors }: ParseErrorsDialogProps) {
           {errors.map((entry) => (
             <div
               key={`${entry.file}-${entry.contentType}`}
-              className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3"
+              className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/5 p-3"
             >
-              <FileWarning className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+              <FileWarning className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-sm font-mono truncate" title={entry.file}>
                   {entry.file}

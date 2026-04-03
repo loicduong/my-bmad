@@ -40,7 +40,7 @@ export function ScrollProgress({ className }: ScrollProgressProps) {
   return (
     <motion.div
       className={cn(
-        "absolute bottom-0 left-0 right-0 h-0.5 origin-left bg-gradient-to-r from-gradient-purple via-gradient-pink via-60% to-gradient-peach",
+        "absolute bottom-0 left-0 right-0 h-0.5 origin-left bg-primary",
         className,
       )}
       style={{ scaleX, opacity: visible ? 1 : 0 }}

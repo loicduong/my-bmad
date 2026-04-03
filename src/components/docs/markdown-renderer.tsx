@@ -221,7 +221,7 @@ const components: Components = {
           type="checkbox"
           checked={props.checked}
           readOnly
-          className="mr-2 h-4 w-4 rounded border-zinc-400 dark:border-zinc-600 accent-blue-500"
+          className="mr-2 h-4 w-4 rounded border-border accent-primary"
         />
       );
     }

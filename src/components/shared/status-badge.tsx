@@ -5,19 +5,19 @@ import type { StoryStatus, EpicStatus } from "@/lib/bmad/types";
 const statusConfig: Record<string, { label: string; className: string }> = {
   done: {
     label: "Done",
-    className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/25",
+    className: "bg-success/15 text-success-foreground border-success/25",
   },
   "in-progress": {
     label: "In Progress",
-    className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/25",
+    className: "bg-info/15 text-info-foreground border-info/25",
   },
   review: {
     label: "Review",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/25",
+    className: "bg-warning/15 text-warning-foreground border-warning/25",
   },
   blocked: {
     label: "Blocked",
-    className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/25",
+    className: "bg-destructive/15 text-destructive-foreground border-destructive/25",
   },
   "ready-for-dev": {
     label: "Ready for Dev",
@@ -25,15 +25,15 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   backlog: {
     label: "Backlog",
-    className: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 border-zinc-500/25",
+    className: "bg-muted text-muted-foreground border-border",
   },
   "not-started": {
     label: "Not Started",
-    className: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 border-zinc-500/25",
+    className: "bg-muted text-muted-foreground border-border",
   },
   unknown: {
     label: "Unknown",
-    className: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-500 border-zinc-500/25",
+    className: "bg-muted text-muted-foreground border-border",
   },
 };
 

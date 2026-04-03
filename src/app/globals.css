@@ -103,7 +103,7 @@
     --warning-foreground: oklch(0.554 0.135 66.442);
     --invert: oklch(0.21 0.006 285.885);
     --invert-foreground: oklch(0.985 0 0);
-    --dot-grid-color: oklch(0.55 0 0 / 20%);
+    --dot-grid-color: oklch(0.55 0 0 / 8%);
 }
 
 .dark {
@@ -147,7 +147,7 @@
     --warning-foreground: oklch(0.828 0.143 78.604);
     --invert: oklch(0.985 0 0);
     --invert-foreground: oklch(0.21 0.006 285.885);
-    --dot-grid-color: oklch(1 0 0 / 10%);
+    --dot-grid-color: oklch(1 0 0 / 4%);
 }
 
 @layer base {
@@ -170,11 +170,11 @@
 
 /* Glassmorphism utilities */
 .glass {
-    @apply bg-white/60 dark:bg-neutral-800/60 backdrop-blur-xl border border-white/20 dark:border-white/10;
+    @apply bg-card/80 dark:bg-[oklch(0.27_0.006_286/75%)] backdrop-blur-lg border border-border/30 dark:border-[oklch(1_0_0/10%)];
 }
 
 .glass-card {
-    @apply bg-white/60 dark:bg-neutral-800/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl shadow-sm;
+    @apply bg-card/80 dark:bg-[oklch(0.27_0.006_286/75%)] backdrop-blur-lg border border-border/30 dark:border-[oklch(1_0_0/10%)] rounded-xl shadow-sm;
 }
 
 /* Gradient mesh background */
@@ -400,6 +400,22 @@
 
 .dark .hljs {
     background: oklch(0.13 0.005 285) !important;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .glass,
+    .glass-card {
+        backdrop-filter: none;
+    }
 }
 
 ::view-transition-old(root),

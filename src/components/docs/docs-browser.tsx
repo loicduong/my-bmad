@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StaggeredList, StaggeredItem } from "@/components/shared/staggered-list";
 import {
   FileText,
   FolderOpen,
@@ -169,8 +170,9 @@ function FilePanel({
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-17rem)]">
-      <Card className="glass-card w-64 shrink-0 overflow-hidden">
+    <StaggeredList className="flex gap-4 h-[calc(100vh-17rem)]" staggerDelay={0.1}>
+      <StaggeredItem>
+      <Card className="glass-card w-64 shrink-0 overflow-hidden h-full">
         <ScrollArea className="h-full p-3 [&_[data-slot=scroll-area-viewport]>div]:block!">
           {hasSecondary ? (
             <div className="space-y-2">
@@ -207,8 +209,10 @@ function FilePanel({
           )}
         </ScrollArea>
       </Card>
+      </StaggeredItem>
 
-      <Card className="glass-card flex-1 overflow-hidden">
+      <StaggeredItem className="flex-1">
+      <Card className="glass-card overflow-hidden h-full">
         <ScrollArea className="h-full p-6">
           <div aria-live="polite">
             {loading ? (
@@ -223,7 +227,7 @@ function FilePanel({
                 {error.includes("Limite") ? (
                   <Badge
                     variant="outline"
-                    className="gap-1.5 text-yellow-600 border-yellow-600/30"
+                    className="gap-1.5 text-warning-foreground border-warning/30"
                   >
                     <AlertTriangle className="size-3.5" />
                     GitHub rate limit reached. Cached data is displayed.
@@ -240,10 +244,10 @@ function FilePanel({
                 {parsedFile.parseError ? (
                   <>
                     <div
-                      className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm"
+                      className="mb-4 rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm"
                       role="alert"
                     >
-                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium">
+                      <div className="flex items-center gap-2 text-warning-foreground font-medium">
                         <AlertTriangle className="h-4 w-4 shrink-0" />
                         This file contains syntax errors. Raw content is
                         displayed below.
@@ -287,7 +291,8 @@ function FilePanel({
           </div>
         </ScrollArea>
       </Card>
-    </div>
+      </StaggeredItem>
+    </StaggeredList>
   );
 }
 

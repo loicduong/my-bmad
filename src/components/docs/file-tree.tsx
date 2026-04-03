@@ -78,7 +78,7 @@ function TreeNode({
         }}
         className={cn(
           "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left hover:bg-accent transition-colors",
-          isSelected && "bg-accent text-accent-foreground font-medium ring-1 ring-inset ring-green-500",
+          isSelected && "bg-accent text-accent-foreground font-medium ring-1 ring-inset ring-primary",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
@@ -91,9 +91,9 @@ function TreeNode({
               )}
             />
             {expanded ? (
-              <FolderOpen className="h-4 w-4 shrink-0 text-violet-500" />
+              <FolderOpen className="h-4 w-4 shrink-0 text-primary" />
             ) : (
-              <Folder className="h-4 w-4 shrink-0 text-violet-500" />
+              <Folder className="h-4 w-4 shrink-0 text-primary" />
             )}
           </>
         ) : (

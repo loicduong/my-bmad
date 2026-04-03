@@ -52,7 +52,7 @@ export function CodeBlockWithCopy(props: React.ComponentProps<"pre">) {
   }, [codeText]);
 
   return (
-    <div className="group/code relative" role="region" aria-label={`Bloc de code${language ? ` ${language}` : ""}`}>
+    <div className="group/code relative" role="region" aria-label={`Code block${language ? ` (${language})` : ""}`}>
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 opacity-0 group-hover/code:opacity-100 transition-opacity duration-300">
         {language && (
           <Badge variant="secondary" className="text-xs font-mono px-1.5 py-0.5">
@@ -61,13 +61,13 @@ export function CodeBlockWithCopy(props: React.ComponentProps<"pre">) {
         )}
         <button
           onClick={handleCopy}
-          className="flex items-center justify-center size-7 rounded-md bg-secondary/80 hover:bg-secondary text-secondary-foreground transition-colors duration-300"
-          aria-label="Copier le code"
+          className="flex items-center justify-center size-9 rounded-md bg-secondary/80 hover:bg-secondary text-secondary-foreground transition-colors duration-300"
+          aria-label="Copy code"
         >
           {copyState === "copied" ? (
-            <Check className="size-3.5 text-green-500" />
+            <Check className="size-3.5 text-success" />
           ) : copyState === "error" ? (
-            <XCircle className="size-3.5 text-red-500" />
+            <XCircle className="size-3.5 text-destructive" />
           ) : (
             <Copy className="size-3.5" />
           )}

@@ -87,7 +87,7 @@ export function ChangePasswordForm() {
           </div>
         )}
         {success && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-400">
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 p-3 text-sm text-success-foreground">
             <Check className="size-4" />
             Password changed successfully.
           </div>

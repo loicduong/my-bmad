@@ -52,7 +52,8 @@ export function DeleteRepoButton({ owner, name, displayName }: DeleteRepoButtonP
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          className="h-9 w-9 text-muted-foreground hover:text-destructive"
+          aria-label="Remove project"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

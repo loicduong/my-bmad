@@ -10,11 +10,11 @@ import type { RepoConfig, ActionResult, UserRole } from "@/lib/types";
  * Returns null if not authenticated.
  */
 export const getAuthenticatedSession = cache(
-  async (): Promise<{ userId: string; role: UserRole } | null> => {
+  async (): Promise<{ userId: string; role: UserRole; email: string } | null> => {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user?.id) return null;
     const role = (session.user.role === "admin" ? "admin" : "user") satisfies UserRole;
-    return { userId: session.user.id, role };
+    return { userId: session.user.id, role, email: session.user.email };
   }
 );
 

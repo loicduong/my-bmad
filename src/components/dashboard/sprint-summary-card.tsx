@@ -135,7 +135,7 @@ export function SprintSummaryCard({
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                        className="h-full rounded-full bg-success transition-all duration-300"
                         style={{ width: `${percent}%` }}
                       />
                     </div>

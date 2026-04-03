@@ -68,14 +68,14 @@ export function StoryDetailView({ story }: StoryDetailViewProps) {
             </div>
             <SegmentedProgressBar
               percent={story.totalTasks > 0 ? Math.round((story.completedTasks / story.totalTasks) * 100) : 0}
-              color={story.completedTasks === story.totalTasks ? "bg-emerald-500" : "bg-orange-500"}
+              color={story.completedTasks === story.totalTasks ? "bg-success" : "bg-warning"}
               className="h-2 mb-4"
             />
             <ul className="space-y-2">
               {story.tasks.map((task, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   {task.completed ? (
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 text-success shrink-0" />
                   ) : (
                     <Circle className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                   )}

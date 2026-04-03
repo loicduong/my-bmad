@@ -10,9 +10,9 @@ interface ProgressRingProps {
 }
 
 function getProgressColor(percent: number) {
-  if (percent >= 75) return { stroke: "stroke-emerald-500", fill: "fill-emerald-600 dark:fill-emerald-400" };
-  if (percent >= 40) return { stroke: "stroke-amber-500", fill: "fill-amber-600 dark:fill-amber-400" };
-  return { stroke: "stroke-rose-500", fill: "fill-rose-600 dark:fill-rose-400" };
+  if (percent >= 75) return { stroke: "stroke-success", fill: "fill-success-foreground" };
+  if (percent >= 40) return { stroke: "stroke-warning", fill: "fill-warning-foreground" };
+  return { stroke: "stroke-destructive", fill: "fill-destructive-foreground" };
 }
 
 export function ProgressRing({
@@ -27,7 +27,7 @@ export function ProgressRing({
   const colors = getProgressColor(percent);
 
   return (
-    <svg width={size} height={size} className={className}>
+    <svg width={size} height={size} className={className} role="img" aria-label={`${percent}% complete`}>
       <circle
         className="stroke-muted"
         fill="none"

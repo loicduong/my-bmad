@@ -1,4 +1,5 @@
 import { StatsCard } from "@/components/shared/stats-card";
+import { StaggeredList, StaggeredItem } from "@/components/shared/staggered-list";
 import { TrendingUp, Activity, AlertTriangle } from "lucide-react";
 import type { SprintStatus } from "@/lib/bmad/types";
 
@@ -20,28 +21,34 @@ export function VelocityMetrics({
   const blockedCount = stories.filter((s) => s.status === "blocked").length;
 
   return (
-    <div className="grid gap-4 grid-cols-3">
-      <StatsCard
-        title="Velocity"
-        value={doneCount}
-        icon={TrendingUp}
-        description={`${totalStories} stories in sprint`}
-        color="emerald"
-      />
-      <StatsCard
-        title="In Progress (WIP)"
-        value={wipCount}
-        icon={Activity}
-        description="In Progress + Review"
-        color="blue"
-      />
-      <StatsCard
-        title="Blocked"
-        value={blockedCount}
-        icon={AlertTriangle}
-        description={blockedCount > 0 ? "Attention required" : "No blockers"}
-        color="rose"
-      />
-    </div>
+    <StaggeredList className="grid gap-4 grid-cols-3">
+      <StaggeredItem>
+        <StatsCard
+          title="Velocity"
+          value={doneCount}
+          icon={TrendingUp}
+          description={`${totalStories} stories in sprint`}
+          color="success"
+        />
+      </StaggeredItem>
+      <StaggeredItem>
+        <StatsCard
+          title="In Progress (WIP)"
+          value={wipCount}
+          icon={Activity}
+          description="In Progress + Review"
+          color="info"
+        />
+      </StaggeredItem>
+      <StaggeredItem>
+        <StatsCard
+          title="Blocked"
+          value={blockedCount}
+          icon={AlertTriangle}
+          description={blockedCount > 0 ? "Attention required" : "No blockers"}
+          color="destructive"
+        />
+      </StaggeredItem>
+    </StaggeredList>
   );
 }

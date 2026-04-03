@@ -61,7 +61,7 @@ export function RefreshRepoButton({ owner, name }: RefreshRepoButtonProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+        className="h-9 w-9 text-muted-foreground hover:text-foreground"
         aria-label="Refresh data"
         onClick={handleRefresh}
         disabled={refreshing}
@@ -77,7 +77,7 @@ export function RefreshRepoButton({ owner, name }: RefreshRepoButtonProps) {
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                   <DialogTitle>Refresh successful</DialogTitle>
                 </div>
                 <DialogDescription>

@@ -131,7 +131,7 @@ export default async function RepoOverviewPage({ params }: RepoPageProps) {
         repo={repoName}
       />
 
-      {/* Liste des Epics */}
+      {/* Epics list */}
       <EpicsList epics={project.epics} owner={owner} repo={repoName} />
     </div>
   );

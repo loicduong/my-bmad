@@ -4,7 +4,7 @@ import { SegmentedProgressBar } from "@/components/shared/segmented-progress-bar
 import type { Epic } from "@/lib/bmad/types";
 
 function getProgressColor(percent: number) {
-  return percent >= 100 ? "bg-emerald-500" : "bg-orange-500";
+  return percent >= 100 ? "bg-success" : "bg-warning";
 }
 
 interface EpicTimelineCardProps {
@@ -17,6 +17,16 @@ export function EpicTimelineCard({ epic, onClick }: EpicTimelineCardProps) {
     <Card
       className={`glass-card${onClick ? " cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200" : ""}`}
       onClick={onClick}
+      {...(onClick && {
+        role: "button" as const,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+      })}
     >
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
@@ -36,7 +46,7 @@ export function EpicTimelineCard({ epic, onClick }: EpicTimelineCardProps) {
               <div className="flex-1">
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
                   <span>
-                    {epic.completedStories} sur {epic.totalStories} stories
+                    {epic.completedStories} of {epic.totalStories} stories
                   </span>
                   <span>{epic.progressPercent}%</span>
                 </div>

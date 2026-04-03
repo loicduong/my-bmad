@@ -14,7 +14,7 @@ export default function AdminLoading() {
         {Array.from({ length: 5 }).map((_, i) => (
           <Card
             key={i}
-            className="bg-white/60 dark:bg-neutral-800/60 backdrop-blur-xl border-white/20 dark:border-white/10"
+            className="glass-card"
           >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -30,7 +30,7 @@ export default function AdminLoading() {
       </div>
 
       {/* Table skeleton */}
-      <Card className="bg-white/60 dark:bg-neutral-800/60 backdrop-blur-xl border-white/20 dark:border-white/10">
+      <Card className="glass-card">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <Skeleton className="h-6 w-32" />

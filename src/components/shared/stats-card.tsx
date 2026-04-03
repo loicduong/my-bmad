@@ -8,7 +8,7 @@ interface StatsCardProps {
   icon: LucideIcon;
   description?: string;
   className?: string;
-  color?: "violet" | "blue" | "emerald" | "amber" | "rose" | "primary";
+  color?: "primary" | "info" | "success" | "warning" | "destructive" | "violet";
 }
 
 const colorStyles = {
@@ -17,13 +17,10 @@ const colorStyles = {
     bg: "bg-violet-500/15",
     text: "text-violet-600 dark:text-violet-400",
   },
-  blue: { bg: "bg-blue-500/15", text: "text-blue-600 dark:text-blue-400" },
-  emerald: {
-    bg: "bg-emerald-500/15",
-    text: "text-emerald-600 dark:text-emerald-400",
-  },
-  amber: { bg: "bg-amber-500/15", text: "text-amber-600 dark:text-amber-400" },
-  rose: { bg: "bg-rose-500/15", text: "text-rose-600 dark:text-rose-400" },
+  info: { bg: "bg-info/15", text: "text-info-foreground" },
+  success: { bg: "bg-success/15", text: "text-success-foreground" },
+  warning: { bg: "bg-warning/15", text: "text-warning-foreground" },
+  destructive: { bg: "bg-destructive/15", text: "text-destructive-foreground" },
 };
 
 export function StatsCard({

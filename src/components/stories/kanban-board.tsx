@@ -2,15 +2,16 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StaggeredList, StaggeredItem } from "@/components/shared/staggered-list";
 import type { StoryDetail, StoryStatus } from "@/lib/bmad/types";
 
 const kanbanColumns: { status: StoryStatus; label: string; color: string }[] = [
-  { status: "backlog", label: "Backlog", color: "bg-zinc-500" },
+  { status: "backlog", label: "Backlog", color: "bg-muted-foreground" },
   { status: "ready-for-dev", label: "Ready for Dev", color: "bg-purple-500" },
-  { status: "in-progress", label: "In Progress", color: "bg-blue-500" },
-  { status: "review", label: "In Review", color: "bg-amber-500" },
-  { status: "blocked", label: "Blocked", color: "bg-red-500" },
-  { status: "done", label: "Done", color: "bg-emerald-500" },
+  { status: "in-progress", label: "In Progress", color: "bg-info" },
+  { status: "review", label: "In Review", color: "bg-warning" },
+  { status: "blocked", label: "Blocked", color: "bg-destructive" },
+  { status: "done", label: "Done", color: "bg-success" },
 ];
 
 interface KanbanBoardProps {
@@ -21,13 +22,13 @@ export function KanbanBoard({ stories }: KanbanBoardProps) {
   if (stories.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 rounded-lg border border-dashed border-border/50 text-muted-foreground">
-        No story matches the filters.
+        No story matches the filters
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+    <StaggeredList className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
       {kanbanColumns.map((col) => {
         const columnStories = stories.filter(
           (s) =>
@@ -35,9 +36,9 @@ export function KanbanBoard({ stories }: KanbanBoardProps) {
             (col.status === "backlog" && s.status === "unknown")
         );
         return (
-          <div key={col.status} className="space-y-3">
+          <StaggeredItem key={col.status} className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className={`h-2.5 w-2.5 rounded-full ${col.color}`} />
+              <div className={`h-2.5 w-2.5 rounded-full ${col.color}`} aria-hidden="true" />
               <h3 className="text-sm font-semibold">{col.label}</h3>
               <Badge variant="secondary" className="ml-auto text-xs">
                 {columnStories.length}
@@ -92,9 +93,9 @@ export function KanbanBoard({ stories }: KanbanBoardProps) {
                 </div>
               )}
             </div>
-          </div>
+          </StaggeredItem>
         );
       })}
-    </div>
+    </StaggeredList>
   );
 }

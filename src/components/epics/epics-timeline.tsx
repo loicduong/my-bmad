@@ -1,5 +1,6 @@
 import { Check, Loader2, Circle } from "lucide-react";
 import { EpicTimelineCard } from "./epic-timeline-card";
+import { StaggeredList, StaggeredItem } from "@/components/shared/staggered-list";
 import type { Epic } from "@/lib/bmad/types";
 
 interface EpicsTimelineProps {
@@ -10,15 +11,15 @@ interface EpicsTimelineProps {
 function StatusIcon({ status }: { status: string }) {
   if (status === "done") {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-success text-white shadow-sm shadow-success/30">
         <Check className="h-4 w-4" strokeWidth={3} />
       </div>
     );
   }
   if (status === "in-progress") {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-blue-500 bg-background">
-        <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
+      <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-info bg-background">
+        <Loader2 className="h-3.5 w-3.5 text-info animate-spin" />
       </div>
     );
   }
@@ -30,8 +31,8 @@ function StatusIcon({ status }: { status: string }) {
 }
 
 function connectorColor(status: string) {
-  if (status === "done") return "bg-emerald-500";
-  if (status === "in-progress") return "bg-blue-500/40";
+  if (status === "done") return "bg-success";
+  if (status === "in-progress") return "bg-info/40";
   return "bg-border";
 }
 
@@ -50,32 +51,34 @@ export function EpicsTimeline({ epics, onSelectEpic }: EpicsTimelineProps) {
   }
 
   return (
-    <div className="space-y-0">
+    <StaggeredList className="space-y-0" staggerDelay={0.08}>
       {epics.map((epic, i) => (
-        <div key={epic.id} className="flex gap-4">
-          {/* Stepper column */}
-          <div className="flex flex-col items-center">
-            {/* Top connector */}
-            <div
-              className={`w-0.5 flex-1 ${i === 0 ? "bg-transparent" : connectorColor(epics[i - 1].status)}`}
-            />
-            {/* Status icon */}
-            <StatusIcon status={epic.status} />
-            {/* Bottom connector */}
-            <div
-              className={`w-0.5 flex-1 ${i === epics.length - 1 ? "bg-transparent" : connectorColor(epic.status)}`}
-            />
-          </div>
+        <StaggeredItem key={epic.id}>
+          <div className="flex gap-4">
+            {/* Stepper column */}
+            <div className="flex flex-col items-center">
+              {/* Top connector */}
+              <div
+                className={`w-0.5 flex-1 ${i === 0 ? "bg-transparent" : connectorColor(epics[i - 1].status)}`}
+              />
+              {/* Status icon */}
+              <StatusIcon status={epic.status} />
+              {/* Bottom connector */}
+              <div
+                className={`w-0.5 flex-1 ${i === epics.length - 1 ? "bg-transparent" : connectorColor(epic.status)}`}
+              />
+            </div>
 
-          {/* Card */}
-          <div className="flex-1 py-2">
-            <EpicTimelineCard
-              epic={epic}
-              onClick={onSelectEpic ? () => onSelectEpic(epic.id) : undefined}
-            />
+            {/* Card */}
+            <div className="flex-1 py-2">
+              <EpicTimelineCard
+                epic={epic}
+                onClick={onSelectEpic ? () => onSelectEpic(epic.id) : undefined}
+              />
+            </div>
           </div>
-        </div>
+        </StaggeredItem>
       ))}
-    </div>
+    </StaggeredList>
   );
 }

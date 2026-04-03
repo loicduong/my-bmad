@@ -13,13 +13,13 @@ interface EpicsListProps {
 }
 
 const statusBorderColor: Record<string, string> = {
-  done: "border-l-emerald-500",
-  "in-progress": "border-l-blue-500",
-  "not-started": "border-l-zinc-400",
+  done: "border-l-success",
+  "in-progress": "border-l-info",
+  "not-started": "border-l-muted-foreground",
 };
 
 function getProgressColor(percent: number) {
-  return percent >= 100 ? "bg-emerald-500" : "bg-orange-500";
+  return percent >= 100 ? "bg-success" : "bg-warning";
 }
 
 export function EpicsList({ epics, owner, repo }: EpicsListProps) {
@@ -51,7 +51,7 @@ export function EpicsList({ epics, owner, repo }: EpicsListProps) {
               href={`/repo/${owner}/${repo}/epics`}
               className={cn(
                 "flex items-center justify-between rounded-lg border border-border/50 border-l-3 p-3 transition-colors duration-300 hover:bg-accent/50",
-                statusBorderColor[epic.status] ?? "border-l-zinc-400",
+                statusBorderColor[epic.status] ?? "border-l-muted-foreground",
               )}
             >
               <div className="flex items-center gap-3 min-w-0">

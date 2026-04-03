@@ -162,6 +162,7 @@ export function EpicsBrowser({
               ? () => goToStories(selectedEpic.id)
               : goToEpics
           }
+          aria-label={view === "story" ? "Back to stories" : "Back to epics"}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -210,8 +211,8 @@ export function EpicsBrowser({
                     percent={selectedEpic.progressPercent}
                     color={
                       selectedEpic.progressPercent >= 100
-                        ? "bg-emerald-500"
-                        : "bg-orange-500"
+                        ? "bg-success"
+                        : "bg-warning"
                     }
                     className="h-2"
                   />
@@ -223,7 +224,7 @@ export function EpicsBrowser({
             {epicStories.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-sm text-muted-foreground">
-                  No story found for this epic.
+                  No story found for this epic
                 </p>
               </div>
             ) : (
@@ -232,7 +233,15 @@ export function EpicsBrowser({
                   <Card
                     key={story.id}
                     className="glass-card cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => goToStory(story.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        goToStory(story.id);
+                      }
+                    }}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between gap-4">

@@ -8,6 +8,7 @@ import {
   getAuthenticatedUserId,
   getAuthenticatedRepos,
 } from "@/lib/db/helpers";
+import { AlertBanner } from "@/components/shared/alert-banner";
 import type { BmadProject } from "@/lib/bmad/types";
 
 const localFsEnabled = process.env.ENABLE_LOCAL_FS === "true";
@@ -62,12 +63,12 @@ export default async function DashboardPage() {
           </p>
         </div>
         {errors.length > 0 && (
-          <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-              {errors.length === 1
-                ? "1 project could not be loaded"
-                : `${errors.length} projects could not be loaded`}
-            </p>
+          <AlertBanner
+            variant="warning"
+            title={errors.length === 1
+              ? "1 project could not be loaded"
+              : `${errors.length} projects could not be loaded`}
+          >
             <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
               {errors.map((err, i) => (
                 <li key={i}>{err}</li>
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
                 Check that the local folder still exists and is accessible on the server.
               </p>
             )}
-          </div>
+          </AlertBanner>
         )}
         {projects.length > 0 && <GlobalStatsBar projects={projects} />}
         <ReposGrid

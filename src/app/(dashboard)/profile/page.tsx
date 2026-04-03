@@ -47,7 +47,9 @@ export default function ProfilePage() {
           );
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+      console.error("Failed to load accounts:", err);
+    })
       .finally(() => setLoadingAccounts(false));
   }, [session?.user?.id]);
 
@@ -58,7 +60,7 @@ export default function ProfilePage() {
       <div className="mesh-gradient min-h-full">
         <div className="space-y-8 pt-6 lg:pt-8">
           <Skeleton className="h-8 w-48" />
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             <Card className="glass-card">
               <CardContent className="flex flex-col items-center gap-4 pt-6">
                 <Skeleton className="size-24 rounded-full" />
@@ -122,7 +124,7 @@ export default function ProfilePage() {
       <div className="space-y-8 pt-6 lg:pt-8">
         <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {/* Left column — Avatar & Password */}
           <div className="space-y-6">
             <Card className="glass-card">
@@ -207,11 +209,12 @@ export default function ProfilePage() {
                     <span className="text-sm">{name}</span>
                     <button
                       type="button"
+                      aria-label="Edit name"
                       onClick={() => {
                         setNameValue(name ?? "");
                         setEditingName(true);
                       }}
-                      className="text-muted-foreground transition-colors hover:text-foreground"
+                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       <Pencil className="size-3.5" />
                     </button>

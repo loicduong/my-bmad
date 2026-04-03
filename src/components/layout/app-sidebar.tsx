@@ -37,9 +37,11 @@ import { AddRepoDialog } from "@/components/layout/add-repo-dialog";
 import { UserMenu } from "@/components/layout/user-menu";
 import type { RepoConfig } from "@/lib/types";
 
+const SUPER_ADMIN_EMAIL = "dev@dahmani.fr";
+
 interface AppSidebarProps {
   repos: RepoConfig[];
-  userRole?: string;
+  userEmail?: string;
   localFsEnabled?: boolean;
   githubEnabled?: boolean;
 }
@@ -51,7 +53,7 @@ const projectTabs = [
   { label: "Library", segment: "docs", icon: FileText },
 ];
 
-export function AppSidebar({ repos, userRole, localFsEnabled, githubEnabled }: AppSidebarProps) {
+export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -174,22 +176,8 @@ export function AppSidebar({ repos, userRole, localFsEnabled, githubEnabled }: A
         </SidebarGroup>
       </SidebarContent>
 
-      {userRole === "admin" && (
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith("/admin")} tooltip="Administration">
-                <Link href="/admin">
-                  <Shield className="h-4 w-4" />
-                  <span>Administration</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      )}
       <SidebarFooter>
-        <div className="px-1 pb-2 group-data-[collapsible=icon]:hidden">
+        <div className="space-y-2 px-1 pb-2 group-data-[collapsible=icon]:hidden">
           <AddRepoDialog
             importedRepos={repos}
             localFsEnabled={localFsEnabled}
@@ -201,6 +189,14 @@ export function AppSidebar({ repos, userRole, localFsEnabled, githubEnabled }: A
               </Button>
             }
           />
+          {userEmail === SUPER_ADMIN_EMAIL && (
+            <Button variant="outline" size="lg" className="w-full" asChild>
+              <Link href="/admin">
+                <Shield className="h-4 w-4" aria-hidden="true" />
+                Admin
+              </Link>
+            </Button>
+          )}
         </div>
         <div className="border-t border-border/50 pt-2">
           <UserMenu />

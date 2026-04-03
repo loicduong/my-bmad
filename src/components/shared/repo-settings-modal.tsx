@@ -90,7 +90,8 @@ export function RepoSettingsModal({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          className="h-9 w-9 text-muted-foreground hover:text-foreground"
+          aria-label="Project settings"
         >
           <Settings className="h-4 w-4" />
         </Button>
