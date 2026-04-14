@@ -35,6 +35,7 @@ export function GlobalStatsBar({ projects }: GlobalStatsBarProps) {
                 ? "All completed"
                 : undefined
           }
+          className="h-full"
         />
       </StaggeredItem>
       <StaggeredItem>
@@ -44,6 +45,7 @@ export function GlobalStatsBar({ projects }: GlobalStatsBarProps) {
           icon={Layers}
           color="violet"
           description={`Across ${projects.length} projects`}
+          className="h-full"
         />
       </StaggeredItem>
       <StaggeredItem>
@@ -52,6 +54,7 @@ export function GlobalStatsBar({ projects }: GlobalStatsBarProps) {
           value={totalStories}
           icon={BookOpen}
           color="info"
+          className="h-full"
         />
       </StaggeredItem>
       <StaggeredItem>
@@ -65,6 +68,7 @@ export function GlobalStatsBar({ projects }: GlobalStatsBarProps) {
               ? `${Math.round((completedStories / totalStories) * 100)}% completed`
               : undefined
           }
+          className="h-full"
         />
       </StaggeredItem>
       <StaggeredItem>
@@ -73,6 +77,7 @@ export function GlobalStatsBar({ projects }: GlobalStatsBarProps) {
           value={inProgressStories}
           icon={Clock}
           color="warning"
+          className="h-full"
         />
       </StaggeredItem>
     </StaggeredList>
