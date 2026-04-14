@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 /**
  * Create an admin user via email/password for first deployment.
  *
