@@ -15,8 +15,7 @@ import {
 import { refreshRepoData } from "@/actions/repo-actions";
 
 interface RefreshRepoButtonProps {
-  owner: string;
-  name: string;
+  repoId: string;
 }
 
 function formatFileCount(count: number): string {
@@ -24,7 +23,7 @@ function formatFileCount(count: number): string {
   return `${count} BMAD file${count > 1 ? "s" : ""} detected.`;
 }
 
-export function RefreshRepoButton({ owner, name }: RefreshRepoButtonProps) {
+export function RefreshRepoButton({ repoId }: RefreshRepoButtonProps) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -38,7 +37,7 @@ export function RefreshRepoButton({ owner, name }: RefreshRepoButtonProps) {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const res = await refreshRepoData({ owner, name });
+      const res = await refreshRepoData({ repoId });
       if (res.success) {
         setResult({ success: true, totalFiles: res.data.totalFiles });
       } else {
@@ -98,7 +97,7 @@ export function RefreshRepoButton({ owner, name }: RefreshRepoButtonProps) {
                 <DialogDescription>
                   <span role="alert">
                     {result.code === "RATE_LIMITED"
-                      ? "GitHub rate limit reached. Cached data is displayed."
+                      ? "Provider rate limit reached. Cached data is displayed."
                       : result.error || "An unknown error occurred."}
                   </span>
                 </DialogDescription>

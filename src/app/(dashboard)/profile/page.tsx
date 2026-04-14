@@ -16,13 +16,17 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Check, Loader2, Pencil, Shield, User } from "lucide-react";
+import { Calendar, Check, Github, Gitlab, Loader2, Pencil, Shield, User } from "lucide-react";
 import { ChangePasswordForm } from "./change-password-form";
 
 export default function ProfilePage() {
   const { data: session, isPending } = authClient.useSession();
   const [hasCredentialAccount, setHasCredentialAccount] = useState(false);
+  const [hasGitHubAccount, setHasGitHubAccount] = useState(false);
+  const [hasGitLabAccount, setHasGitLabAccount] = useState(false);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [connectingProvider, setConnectingProvider] = useState<"github" | "gitlab" | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   // Profile editing state
   const [editingName, setEditingName] = useState(false);
@@ -40,11 +44,12 @@ export default function ProfilePage() {
       .listAccounts()
       .then((res) => {
         if (res.data) {
+          const accounts = res.data as { providerId: string }[];
           setHasCredentialAccount(
-            res.data.some(
-              (a: { providerId: string }) => a.providerId === "credential"
-            )
+            accounts.some((a) => a.providerId === "credential")
           );
+          setHasGitHubAccount(accounts.some((a) => a.providerId === "github"));
+          setHasGitLabAccount(accounts.some((a) => a.providerId === "gitlab"));
         }
       })
       .catch((err) => {
@@ -119,6 +124,24 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleConnectProvider(provider: "github" | "gitlab") {
+    setConnectingProvider(provider);
+    setConnectError(null);
+    try {
+      const result = await authClient.linkSocial({
+        provider,
+        callbackURL: "/profile",
+      });
+      if (result.error) {
+        setConnectError(`Could not connect ${provider === "gitlab" ? "GitLab" : "GitHub"}.`);
+      }
+    } catch {
+      setConnectError("An unexpected error occurred.");
+    } finally {
+      setConnectingProvider(null);
+    }
+  }
+
   return (
     <div className="mesh-gradient min-h-full">
       <div className="space-y-8 pt-6 lg:pt-8">
@@ -158,6 +181,61 @@ export default function ProfilePage() {
               </Card>
             ) : (
               hasCredentialAccount && <ChangePasswordForm />
+            )}
+
+            {!loadingAccounts && (
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-lg">Connected Providers</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {connectError && (
+                    <p className="text-sm text-destructive">{connectError}</p>
+                  )}
+                  <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/30 px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Github className="size-4 text-muted-foreground" />
+                      GitHub
+                    </div>
+                    {hasGitHubAccount ? (
+                      <Badge variant="secondary">Connected</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleConnectProvider("github")}
+                        disabled={connectingProvider !== null}
+                      >
+                        {connectingProvider === "github" && (
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                        )}
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/30 px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Gitlab className="size-4 text-muted-foreground" />
+                      GitLab
+                    </div>
+                    {hasGitLabAccount ? (
+                      <Badge variant="secondary">Connected</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleConnectProvider("gitlab")}
+                        disabled={connectingProvider !== null}
+                      >
+                        {connectingProvider === "gitlab" && (
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                        )}
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 

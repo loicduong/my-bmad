@@ -32,8 +32,6 @@ export function AppHeader() {
   ];
 
   if (segments[0] === "repo" && segments.length >= 3) {
-    const owner = segments[1];
-    const repo = segments[2];
     if (segments[3]) {
       // When extraSegments exist, they already include the section context,
       // so only add the route segment when there are no extra segments.
@@ -44,7 +42,7 @@ export function AppHeader() {
       } else {
         breadcrumbs.push({
           label: getRouteLabel(segments[3]),
-          href: `/repo/${owner}/${repo}/${segments[3]}`,
+          href: `/repo/${segments[1]}/${segments[2]}/${segments[3]}`,
         });
       }
     }

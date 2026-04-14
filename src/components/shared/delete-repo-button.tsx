@@ -15,13 +15,15 @@ import {
 } from "@/components/ui/dialog";
 import { deleteRepo } from "@/actions/repo-actions";
 
+import type { SourceType } from "@/lib/types";
+
 interface DeleteRepoButtonProps {
-  owner: string;
-  name: string;
+  repoId: string;
   displayName: string;
+  sourceType: SourceType;
 }
 
-export function DeleteRepoButton({ owner, name, displayName }: DeleteRepoButtonProps) {
+export function DeleteRepoButton({ repoId, displayName, sourceType }: DeleteRepoButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -31,7 +33,7 @@ export function DeleteRepoButton({ owner, name, displayName }: DeleteRepoButtonP
     setDeleting(true);
     setError(null);
     try {
-      const result = await deleteRepo({ owner, name });
+      const result = await deleteRepo({ repoId });
       if (result.success) {
         setOpen(false);
         router.push("/");
@@ -62,7 +64,7 @@ export function DeleteRepoButton({ owner, name, displayName }: DeleteRepoButtonP
         <DialogHeader>
           <DialogTitle>Remove project</DialogTitle>
           <DialogDescription>
-            Do you want to remove <strong>{displayName}</strong> from the dashboard? The GitHub repository will not be deleted.
+            Do you want to remove <strong>{displayName}</strong> from the dashboard? The {sourceType === "local" ? "local folder" : "remote repository"} will not be deleted.
           </DialogDescription>
         </DialogHeader>
         {error && (

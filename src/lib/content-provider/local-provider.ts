@@ -183,7 +183,7 @@ export class LocalProvider implements ContentProvider {
     }
 
     // Guard 7 — Restrict access to BMAD directories only
-    const firstSegment = filePath.split(path.sep)[0];
+    const firstSegment = filePath.split(/[\\/]/)[0];
     if (!LocalProvider.BMAD_DIRS.has(firstSegment)) {
       throw new Error("Access denied: only BMAD directories are accessible");
     }

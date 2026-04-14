@@ -5,6 +5,14 @@ import { createUserOctokit } from "@/lib/github/client";
 import type { RepoConfig } from "@/lib/types";
 import type { BmadProject } from "./types";
 
+type ProviderTokens =
+  | string
+  | {
+      githubToken?: string;
+      gitlabToken?: string;
+    }
+  | undefined;
+
 /**
  * React.cache()-wrapped version of getBmadProject.
  * Deduplicates calls within the same React Server Component render tree,
@@ -18,15 +26,23 @@ import type { BmadProject } from "./types";
 export const getCachedBmadProject = cache(
   async (
     config: RepoConfig,
-    accessToken: string | undefined,
+    tokens: ProviderTokens,
     userId: string | undefined,
   ): Promise<BmadProject | null> => {
+    const githubToken =
+      typeof tokens === "string" ? tokens : tokens?.githubToken;
+    const gitlabToken =
+      typeof tokens === "string" ? undefined : tokens?.gitlabToken;
     const octokit =
-      config.sourceType === "github" && accessToken
-        ? createUserOctokit(accessToken)
+      config.sourceType === "github" && githubToken
+        ? createUserOctokit(githubToken)
         : undefined;
 
-    const provider = createContentProvider(config, octokit, userId);
+    const provider = createContentProvider(config, {
+      octokit,
+      gitlabToken,
+      userId,
+    });
     return getBmadProject(config, provider);
   },
 );

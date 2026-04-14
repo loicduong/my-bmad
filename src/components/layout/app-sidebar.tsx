@@ -15,6 +15,7 @@ import {
   FileText,
   Shield,
   PlusIcon,
+  Gitlab,
 } from "lucide-react";
 import { Collapsible } from "radix-ui";
 import {
@@ -35,6 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddRepoDialog } from "@/components/layout/add-repo-dialog";
 import { UserMenu } from "@/components/layout/user-menu";
+import { getRepoHref } from "@/lib/repo-routes";
 import type { RepoConfig } from "@/lib/types";
 
 const SUPER_ADMIN_EMAIL = "dev@dahmani.fr";
@@ -44,6 +46,7 @@ interface AppSidebarProps {
   userEmail?: string;
   localFsEnabled?: boolean;
   githubEnabled?: boolean;
+  gitlabEnabled?: boolean;
 }
 
 const projectTabs = [
@@ -53,17 +56,17 @@ const projectTabs = [
   { label: "Library", segment: "docs", icon: FileText },
 ];
 
-export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled }: AppSidebarProps) {
+export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled, gitlabEnabled }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   // Track which repo key is expanded — only one at a time
   const activeRepoKey = useMemo(
-    () => repos.find((r) => pathname.startsWith(`/repo/${r.owner}/${r.name}`)),
+    () => repos.find((r) => pathname.startsWith(getRepoHref(r.sourceType, r.id))),
     [repos, pathname]
   );
   const derivedOpenRepo = activeRepoKey
-    ? `${activeRepoKey.owner}/${activeRepoKey.name}`
+    ? activeRepoKey.id
     : null;
   const [openRepo, setOpenRepo] = useState<string | null>(derivedOpenRepo);
 
@@ -108,10 +111,10 @@ export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled }: 
           <SidebarGroupContent>
             <SidebarMenu>
               {repos.map((repo) => {
-                const basePath = `/repo/${repo.owner}/${repo.name}`;
+                const basePath = getRepoHref(repo.sourceType, repo.id);
                 const isRepoActive = pathname.startsWith(basePath);
 
-                const repoKey = `${repo.owner}/${repo.name}`;
+                const repoKey = repo.id;
 
                 return (
                   <Collapsible.Root
@@ -130,6 +133,8 @@ export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled }: 
                         <SidebarMenuButton isActive={isRepoActive} tooltip={repo.displayName}>
                           {repo.sourceType === "local" ? (
                             <FolderOpen className="h-4 w-4" />
+                          ) : repo.sourceType === "gitlab" ? (
+                            <Gitlab className="h-4 w-4" />
                           ) : (
                             <FolderGit2 className="h-4 w-4" />
                           )}
@@ -182,6 +187,7 @@ export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled }: 
             importedRepos={repos}
             localFsEnabled={localFsEnabled}
             githubEnabled={githubEnabled}
+            gitlabEnabled={gitlabEnabled}
             trigger={
               <Button variant="outline" size="lg" className="w-full">
                 <PlusIcon aria-hidden="true" />

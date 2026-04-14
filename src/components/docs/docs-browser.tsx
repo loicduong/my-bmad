@@ -101,14 +101,12 @@ function treeContainsPath(nodes: FileTreeNode[], path: string): boolean {
 function FilePanel({
   fileTree,
   secondaryTree,
-  owner,
-  repo,
+  repoId,
   initialSelectedFile,
 }: {
   fileTree: FileTreeNode[];
   secondaryTree?: FileTreeNode[];
-  owner: string;
-  repo: string;
+  repoId: string;
   initialSelectedFile?: string;
 }) {
   const [selectedPath, setSelectedPath] = useState<string | null>(
@@ -129,7 +127,7 @@ function FilePanel({
 
     let cancelled = false;
 
-    fetchParsedFileContent({ owner, name: repo, path: selectedPath })
+    fetchParsedFileContent({ repoId, path: selectedPath })
       .then((result) => {
         if (cancelled) return;
         if (result.success) {
@@ -151,7 +149,7 @@ function FilePanel({
     return () => {
       cancelled = true;
     };
-  }, [selectedPath, owner, repo]);
+  }, [selectedPath, repoId]);
 
   const hasSecondary = secondaryTree && secondaryTree.length > 0;
   const initialInSecondary =
@@ -300,8 +298,7 @@ interface DocsBrowserProps {
   fileTree: FileTreeNode[];
   docsTree: FileTreeNode[];
   bmadCoreTree: FileTreeNode[];
-  owner: string;
-  repo: string;
+  repoId: string;
   initialSelectedFile?: string;
 }
 
@@ -309,8 +306,7 @@ export function DocsBrowser({
   fileTree,
   docsTree,
   bmadCoreTree,
-  owner,
-  repo,
+  repoId,
   initialSelectedFile,
 }: DocsBrowserProps) {
   const hasDocs = docsTree.length > 0;
@@ -322,8 +318,7 @@ export function DocsBrowser({
       <FilePanel
         fileTree={fileTree}
         secondaryTree={bmadCoreTree.length > 0 ? bmadCoreTree : undefined}
-        owner={owner}
-        repo={repo}
+        repoId={repoId}
         initialSelectedFile={initialSelectedFile}
       />
     );
@@ -333,8 +328,7 @@ export function DocsBrowser({
     return (
       <FilePanel
         fileTree={docsTree}
-        owner={owner}
-        repo={repo}
+        repoId={repoId}
         initialSelectedFile={initialSelectedFile}
       />
     );
@@ -363,8 +357,7 @@ export function DocsBrowser({
         <FilePanel
           fileTree={fileTree}
           secondaryTree={bmadCoreTree.length > 0 ? bmadCoreTree : undefined}
-          owner={owner}
-          repo={repo}
+          repoId={repoId}
           initialSelectedFile={initialInDocs ? undefined : initialSelectedFile}
         />
       </TabsContent>
@@ -372,8 +365,7 @@ export function DocsBrowser({
       <TabsContent value="docs" className="mt-4">
         <FilePanel
           fileTree={docsTree}
-          owner={owner}
-          repo={repo}
+          repoId={repoId}
           initialSelectedFile={initialInDocs ? initialSelectedFile : undefined}
         />
       </TabsContent>

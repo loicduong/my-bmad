@@ -51,7 +51,7 @@ export const getAuthenticatedRepos = cache(
   async (userId: string): Promise<RepoConfig[]> => {
     const rows = await prisma.repo.findMany({
       where: { userId },
-      select: { owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, localPath: true, lastSyncedAt: true },
+      select: { id: true, owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, localPath: true, lastSyncedAt: true },
       orderBy: { createdAt: "desc" },
     });
     return rows as RepoConfig[];
@@ -70,7 +70,17 @@ export const getAuthenticatedRepoConfig = cache(
   ): Promise<RepoConfig | null> => {
     const row = await prisma.repo.findFirst({
       where: { userId, owner, name },
-      select: { owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, localPath: true, lastSyncedAt: true },
+      select: { id: true, owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, localPath: true, lastSyncedAt: true },
+    });
+    return row as RepoConfig | null;
+  }
+);
+
+export const getAuthenticatedRepoConfigById = cache(
+  async (userId: string, repoId: string): Promise<RepoConfig | null> => {
+    const row = await prisma.repo.findFirst({
+      where: { userId, id: repoId },
+      select: { id: true, owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, localPath: true, lastSyncedAt: true },
     });
     return row as RepoConfig | null;
   }
