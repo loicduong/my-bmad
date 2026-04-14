@@ -67,7 +67,7 @@ export default async function DashboardPage() {
             </ul>
             {hasErrors && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Ensure your GITLAB_PAT is correct and has "read_api" scope.
+                Ensure your GITLAB_PAT is correct and has &quot;read_api&quot; scope.
               </p>
             )}
           </AlertBanner>
