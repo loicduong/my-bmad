@@ -29,6 +29,7 @@ export default function ProfilePage() {
   const [nameValue, setNameValue] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [formattedDate, setFormattedDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -51,6 +52,19 @@ export default function ProfilePage() {
       })
       .finally(() => setLoadingAccounts(false));
   }, [session?.user?.id]);
+
+  // Handle date formatting on client to avoid hydration mismatch
+  useEffect(() => {
+    if (session?.user?.createdAt) {
+      setFormattedDate(
+        new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(session.user.createdAt))
+      );
+    }
+  }, [session?.user?.createdAt]);
 
   const router = useRouter();
 
@@ -85,15 +99,7 @@ export default function ProfilePage() {
     return null;
   }
 
-  const { name, email, image, role, createdAt } = session.user;
-
-  const formattedDate = createdAt
-    ? new Intl.DateTimeFormat("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }).format(new Date(createdAt))
-    : null;
+  const { name, email, image, role } = session.user;
 
   async function handleSaveName() {
     const trimmed = nameValue.trim();

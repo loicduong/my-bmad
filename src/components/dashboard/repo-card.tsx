@@ -55,71 +55,80 @@ function EpicSummaryRow({ epic }: { epic: Epic }) {
 export function RepoCard({ project, description, sourceType, repoId }: RepoCardProps) {
   const visibleEpics = project.epics.slice(0, 3);
   const remainingEpics = Math.max(0, project.epics.length - 3);
+  const repoHref = getRepoHref(sourceType, repoId);
 
   return (
-    <Link href={getRepoHref(sourceType, repoId)}>
-      <Card className="glass-card hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
-                {project.displayName}
-                {(project.parseHealth?.errors.length ?? 0) > 0 && (
+    <Card className="glass-card relative hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 group h-full overflow-hidden">
+      {/* Absolute overlay link for the entire card */}
+      <Link 
+        href={repoHref} 
+        className="absolute inset-0 z-0" 
+        aria-label={`View details for ${project.displayName}`}
+      />
+      
+      <CardHeader className="pb-3 relative z-10 pointer-events-none">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2 pointer-events-auto">
+              <span>{project.displayName}</span>
+              {(project.parseHealth?.errors.length ?? 0) > 0 && (
+                <div className="inline-flex">
                   <ParseErrorsDialog errors={project.parseHealth?.errors ?? []} />
-                )}
-              </CardTitle>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <GitBranch className="h-3 w-3" />
-                <span>
-                   {project.owner}/{project.repo}
-                </span>
-              </div>
-              {description && (
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  {description}
-                </p>
+                </div>
               )}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <GitBranch className="h-3 w-3" />
+              <span>
+                 {project.owner}/{project.repo}
+              </span>
             </div>
-            <ProgressRing percent={project.progressPercent} size={52} strokeWidth={4} />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Layers className="h-3.5 w-3.5" />
-              <span>{project.epics.length} epics</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <BookOpen className="h-3.5 w-3.5" />
-              <span>{project.totalStories} stories</span>
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2 flex-wrap">
-            {project.completedStories > 0 && (
-              <Badge variant="outline" className="bg-success/15 text-success-foreground border-success/25 text-xs">
-                {project.completedStories} completed
-              </Badge>
-            )}
-            {project.inProgressStories > 0 && (
-              <Badge variant="outline" className="bg-info/15 text-info-foreground border-info/25 text-xs">
-                {project.inProgressStories} in progress
-              </Badge>
+            {description && (
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                {description}
+              </p>
             )}
           </div>
-          {project.epics.length > 0 && (
-            <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
-              {visibleEpics.map((epic) => (
-                <EpicSummaryRow key={epic.id} epic={epic} />
-              ))}
-              {remainingEpics > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  +{remainingEpics} epics
-                </p>
-              )}
-            </div>
+          <ProgressRing percent={project.progressPercent} size={52} strokeWidth={4} />
+        </div>
+      </CardHeader>
+      
+      <CardContent className="relative z-10 pointer-events-none">
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Layers className="h-3.5 w-3.5" />
+            <span>{project.epics.length} epics</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>{project.totalStories} stories</span>
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2 flex-wrap">
+          {project.completedStories > 0 && (
+            <Badge variant="outline" className="bg-success/15 text-success-foreground border-success/25 text-xs">
+              {project.completedStories} completed
+            </Badge>
           )}
-        </CardContent>
-      </Card>
-    </Link>
+          {project.inProgressStories > 0 && (
+            <Badge variant="outline" className="bg-info/15 text-info-foreground border-info/25 text-xs">
+              {project.inProgressStories} in progress
+            </Badge>
+          )}
+        </div>
+        {project.epics.length > 0 && (
+          <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
+            {visibleEpics.map((epic) => (
+              <EpicSummaryRow key={epic.id} epic={epic} />
+            ))}
+            {remainingEpics > 0 && (
+              <p className="text-xs text-muted-foreground">
+                +{remainingEpics} epics
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
