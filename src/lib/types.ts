@@ -9,8 +9,8 @@ export function isUserRole(value: unknown): value is UserRole {
   return value === "user" || value === "admin";
 }
 
-/** Source type for a repo: remote provider or local filesystem. */
-export type SourceType = "github" | "gitlab" | "local";
+/** Source type for a repo: remote provider. */
+export type SourceType = "gitlab";
 
 /** Shared repo config shape used across layout, pages, sidebar, and parser. */
 export interface RepoConfig {

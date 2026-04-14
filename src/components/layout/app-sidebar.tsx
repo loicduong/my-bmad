@@ -6,8 +6,6 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  FolderGit2,
-  FolderOpen,
   ChevronRight,
   Eye,
   Map,
@@ -44,8 +42,6 @@ const SUPER_ADMIN_EMAIL = "dev@dahmani.fr";
 interface AppSidebarProps {
   repos: RepoConfig[];
   userEmail?: string;
-  localFsEnabled?: boolean;
-  githubEnabled?: boolean;
   gitlabEnabled?: boolean;
 }
 
@@ -56,7 +52,7 @@ const projectTabs = [
   { label: "Library", segment: "docs", icon: FileText },
 ];
 
-export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled, gitlabEnabled }: AppSidebarProps) {
+export function AppSidebar({ repos, userEmail, gitlabEnabled }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -131,13 +127,7 @@ export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled, gi
                     <SidebarMenuItem>
                       <Collapsible.Trigger asChild>
                         <SidebarMenuButton isActive={isRepoActive} tooltip={repo.displayName}>
-                          {repo.sourceType === "local" ? (
-                            <FolderOpen className="h-4 w-4" />
-                          ) : repo.sourceType === "gitlab" ? (
-                            <Gitlab className="h-4 w-4" />
-                          ) : (
-                            <FolderGit2 className="h-4 w-4" />
-                          )}
+                          <Gitlab className="h-4 w-4" />
                           <span>{repo.displayName}</span>
                           <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                         </SidebarMenuButton>
@@ -185,8 +175,6 @@ export function AppSidebar({ repos, userEmail, localFsEnabled, githubEnabled, gi
         <div className="space-y-2 px-1 pb-2 group-data-[collapsible=icon]:hidden">
           <AddRepoDialog
             importedRepos={repos}
-            localFsEnabled={localFsEnabled}
-            githubEnabled={githubEnabled}
             gitlabEnabled={gitlabEnabled}
             trigger={
               <Button variant="outline" size="lg" className="w-full">

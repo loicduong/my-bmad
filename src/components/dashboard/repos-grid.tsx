@@ -7,12 +7,10 @@ import type { RepoConfig } from "@/lib/types";
 interface ReposGridProps {
   projects: BmadProject[];
   repos: RepoConfig[];
-  localFsEnabled?: boolean;
-  githubEnabled?: boolean;
   gitlabEnabled?: boolean;
 }
 
-export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled, gitlabEnabled }: ReposGridProps) {
+export function ReposGrid({ projects, repos, gitlabEnabled }: ReposGridProps) {
   if (repos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -22,7 +20,7 @@ export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled, gitl
         <p className="mt-2 text-sm text-muted-foreground mb-4">
           Add a BMAD repo to get started.
         </p>
-        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} gitlabEnabled={gitlabEnabled} />
+        <AddRepoCard gitlabEnabled={gitlabEnabled} />
       </div>
     );
   }
@@ -55,7 +53,7 @@ export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled, gitl
         </StaggeredItem>
       ))}
       <StaggeredItem>
-        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} gitlabEnabled={gitlabEnabled} />
+        <AddRepoCard gitlabEnabled={gitlabEnabled} />
       </StaggeredItem>
     </StaggeredList>
   );

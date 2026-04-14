@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getBmadProject } from "@/lib/bmad/parser";
-import { createUserOctokit, getGitHubToken } from "@/lib/github/client";
 import { getGitLabToken } from "@/lib/gitlab/token";
 import { createContentProvider } from "@/lib/content-provider";
 import { ReposGrid } from "@/components/dashboard/repos-grid";
@@ -12,27 +11,18 @@ import {
 import { AlertBanner } from "@/components/shared/alert-banner";
 import type { BmadProject } from "@/lib/bmad/types";
 
-const localFsEnabled = process.env.ENABLE_LOCAL_FS === "true";
-
 export default async function DashboardPage() {
   const userId = await getAuthenticatedUserId();
   if (!userId) redirect("/login");
 
   const repos = await getAuthenticatedRepos(userId);
-
-  // Only fetch GitHub token if at least one repo is GitHub-sourced (F34)
-  const hasGithubRepos = repos.some((r) => r.sourceType === "github");
-  const hasGitLabRepos = repos.some((r) => r.sourceType === "gitlab");
-  const token = hasGithubRepos ? await getGitHubToken(userId) : null;
-  const gitlabToken = hasGitLabRepos ? await getGitLabToken(userId) : null;
-  const octokit = token ? createUserOctokit(token) : undefined;
+  const gitlabToken = await getGitLabToken(); // Now returns GITLAB_PAT or null
 
   const projects: BmadProject[] = [];
   const errors: string[] = [];
   const results = await Promise.allSettled(
     repos.map((repo) => {
       const provider = createContentProvider(repo, {
-        octokit,
         gitlabToken: gitlabToken ?? undefined,
         userId,
       });
@@ -52,16 +42,7 @@ export default async function DashboardPage() {
     }
   }
 
-  // F44: Separate error messages by source type
-  const hasGithubErrors = errors.length > 0 && repos.some(
-    (r, i) => r.sourceType === "github" && results[i].status === "rejected"
-  );
-  const hasLocalErrors = errors.length > 0 && repos.some(
-    (r, i) => r.sourceType === "local" && results[i].status === "rejected"
-  );
-  const hasGitLabErrors = errors.length > 0 && repos.some(
-    (r, i) => r.sourceType === "gitlab" && results[i].status === "rejected"
-  );
+  const hasErrors = errors.length > 0;
 
   return (
     <div className="mesh-gradient min-h-full">
@@ -84,19 +65,9 @@ export default async function DashboardPage() {
                 <li key={i}>{err}</li>
               ))}
             </ul>
-            {hasGithubErrors && errors.some((e) => /\b(404|Not Found)\b/i.test(e)) && (
+            {hasErrors && (
               <p className="mt-2 text-xs text-muted-foreground">
-                If the repo is private, try reconnecting via GitHub to renew your OAuth authorization.
-              </p>
-            )}
-            {hasGitLabErrors && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                If the repo is private, try reconnecting via GitLab to renew your OAuth authorization.
-              </p>
-            )}
-            {hasLocalErrors && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Check that the local folder still exists and is accessible on the server.
+                Ensure your GITLAB_PAT is correct and has "read_api" scope.
               </p>
             )}
           </AlertBanner>
@@ -105,9 +76,7 @@ export default async function DashboardPage() {
         <ReposGrid
           projects={projects}
           repos={repos}
-          localFsEnabled={localFsEnabled}
-          githubEnabled={!!token}
-          gitlabEnabled={!!gitlabToken}
+          gitlabEnabled={!!process.env.GITLAB_PAT}
         />
       </div>
     </div>

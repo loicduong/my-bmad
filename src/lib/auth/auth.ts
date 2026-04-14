@@ -9,11 +9,6 @@ if (process.env.NEXT_PHASE !== "phase-production-build") {
   }
 }
 
-const hasGitHubCredentials =
-  !!process.env.GITHUB_CLIENT_ID && !!process.env.GITHUB_CLIENT_SECRET;
-const hasGitLabCredentials =
-  !!process.env.GITLAB_CLIENT_ID && !!process.env.GITLAB_CLIENT_SECRET;
-
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -21,25 +16,6 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  ...((hasGitHubCredentials || hasGitLabCredentials) && {
-    socialProviders: {
-      ...(hasGitHubCredentials && {
-        github: {
-          clientId: process.env.GITHUB_CLIENT_ID!,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-          scope: ["repo", "read:user"],
-        },
-      }),
-      ...(hasGitLabCredentials && {
-        gitlab: {
-          clientId: process.env.GITLAB_CLIENT_ID!,
-          clientSecret: process.env.GITLAB_CLIENT_SECRET!,
-          issuer: process.env.GITLAB_ISSUER || "https://gitlab.com",
-          scope: ["read_api", "read_repository"],
-        },
-      }),
-    },
-  }),
   session: {
     expiresIn: Math.max(Number(process.env.SESSION_EXPIRES_IN) || 60 * 60 * 24 * 7, 300), // Default: 7 jours, min: 5 min
     updateAge: Math.max(Number(process.env.SESSION_UPDATE_AGE) || 60 * 60 * 24, 60), // Default: 1 jour, min: 1 min

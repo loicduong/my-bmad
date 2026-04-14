@@ -4,7 +4,7 @@ import { ProgressRing } from "@/components/shared/progress-ring";
 import { ParseErrorsDialog } from "@/components/shared/parse-errors-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { GitBranch, FolderOpen, BookOpen, Layers } from "lucide-react";
+import { GitBranch, BookOpen, Layers } from "lucide-react";
 import { getRepoHref } from "@/lib/repo-routes";
 import type { BmadProject, Epic } from "@/lib/bmad/types";
 import type { SourceType } from "@/lib/types";
@@ -69,15 +69,9 @@ export function RepoCard({ project, description, sourceType, repoId }: RepoCardP
                 )}
               </CardTitle>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {sourceType === "local" ? (
-                  <FolderOpen className="h-3 w-3" />
-                ) : (
-                  <GitBranch className="h-3 w-3" />
-                )}
+                <GitBranch className="h-3 w-3" />
                 <span>
-                  {sourceType === "local"
-                    ? project.displayName
-                    : `${project.owner}/${project.repo}`}
+                   {project.owner}/{project.repo}
                 </span>
               </div>
               {description && (

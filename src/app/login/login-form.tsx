@@ -12,16 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Github, Gitlab, Loader2, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import Image from "next/image";
 
 interface LoginFormProps {
-  githubEnabled: boolean;
-  gitlabEnabled: boolean;
   registrationEnabled: boolean;
 }
 
-export function LoginForm({ githubEnabled, gitlabEnabled, registrationEnabled }: LoginFormProps) {
+export function LoginForm({ registrationEnabled }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,60 +159,6 @@ export function LoginForm({ githubEnabled, gitlabEnabled, registrationEnabled }:
               ? "Déjà un compte ? Se connecter"
               : "Pas de compte ? S'inscrire"}
           </button>
-        )}
-
-        {(githubEnabled || gitlabEnabled) && (
-          <>
-            <div className="relative flex items-center py-1">
-              <div className="flex-1 border-t border-border" />
-              <span className="mx-3 text-xs text-muted-foreground">ou</span>
-              <div className="flex-1 border-t border-border" />
-            </div>
-            {githubEnabled && (
-              <Button
-                variant="outline"
-                className="w-full"
-                size="lg"
-                disabled={loading}
-                onClick={() => {
-                  setLoading(true);
-                  authClient.signIn.social({
-                    provider: "github",
-                    callbackURL: "/",
-                  });
-                }}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Github className="mr-2 h-5 w-5" />
-                )}
-                Continuer avec GitHub
-              </Button>
-            )}
-            {gitlabEnabled && (
-              <Button
-                variant="outline"
-                className="w-full"
-                size="lg"
-                disabled={loading}
-                onClick={() => {
-                  setLoading(true);
-                  authClient.signIn.social({
-                    provider: "gitlab",
-                    callbackURL: "/",
-                  });
-                }}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Gitlab className="mr-2 h-5 w-5" />
-                )}
-                Continuer avec GitLab
-              </Button>
-            )}
-          </>
         )}
       </CardContent>
     </Card>

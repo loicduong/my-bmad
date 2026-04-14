@@ -6,16 +6,12 @@ import { AddRepoDialog } from "@/components/layout/add-repo-dialog";
 import Image from "next/image";
 
 interface AddRepoCardProps {
-  localFsEnabled?: boolean;
-  githubEnabled?: boolean;
   gitlabEnabled?: boolean;
 }
 
-export function AddRepoCard({ localFsEnabled, githubEnabled, gitlabEnabled }: AddRepoCardProps) {
+export function AddRepoCard({ gitlabEnabled }: AddRepoCardProps) {
   return (
     <AddRepoDialog
-      localFsEnabled={localFsEnabled}
-      githubEnabled={githubEnabled}
       gitlabEnabled={gitlabEnabled}
       trigger={
         <Card className="glass-card hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer aspect-square flex items-center justify-center border-dashed border-2 border-border/50 hover:border-primary/30 p-8">

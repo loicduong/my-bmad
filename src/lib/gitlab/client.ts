@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { fileTag, repoTag } from "@/lib/github/cache-tags";
+import { fileTag, repoTag } from "@/lib/cache-tags";
 
 export interface GitLabTreeItem {
   id?: string;

@@ -7,8 +7,6 @@ import {
   getAuthenticatedSession,
   getAuthenticatedRepos,
 } from "@/lib/db/helpers";
-import { getGitHubToken } from "@/lib/github/client";
-import { getGitLabToken } from "@/lib/gitlab/token";
 
 export default async function DashboardLayout({
   children,
@@ -20,17 +18,8 @@ export default async function DashboardLayout({
 
   const repos = await getAuthenticatedRepos(session.userId);
 
-  const localFsEnabled = process.env.ENABLE_LOCAL_FS === "true";
-  const hasGitHubOAuth =
-    !!process.env.GITHUB_CLIENT_ID && !!process.env.GITHUB_CLIENT_SECRET;
-  const hasGitLabOAuth =
-    !!process.env.GITLAB_CLIENT_ID && !!process.env.GITLAB_CLIENT_SECRET;
-  const hasGitHubToken = hasGitHubOAuth
-    ? !!(await getGitHubToken(session.userId))
-    : false;
-  const hasGitLabToken = hasGitLabOAuth
-    ? !!(await getGitLabToken(session.userId))
-    : false;
+  // GitLab is considered enabled if the PAT is set
+  const gitlabEnabled = !!process.env.GITLAB_PAT;
 
   return (
     <BreadcrumbProvider>
@@ -38,9 +27,7 @@ export default async function DashboardLayout({
         <AppSidebar
           repos={repos}
           userEmail={session.email}
-          localFsEnabled={localFsEnabled}
-          githubEnabled={hasGitHubToken}
-          gitlabEnabled={hasGitLabToken}
+          gitlabEnabled={gitlabEnabled}
         />
         <SidebarInset>
           <AppHeader />

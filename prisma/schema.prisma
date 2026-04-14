@@ -78,8 +78,7 @@ model Repo {
   branch        String    @default("main")
   displayName   String
   description   String?
-  sourceType    String    @default("github")
-  localPath     String?
+  sourceType    String    @default("gitlab")
   totalFiles    Int?
   lastSyncedAt  DateTime?
   userId        String

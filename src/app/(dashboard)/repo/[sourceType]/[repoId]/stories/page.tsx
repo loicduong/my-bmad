@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import { getCachedBmadProject } from "@/lib/bmad/cached-project";
-import { getGitHubToken } from "@/lib/github/client";
 import { getGitLabToken } from "@/lib/gitlab/token";
 import { StoriesView } from "@/components/stories/stories-view";
 import {
@@ -21,12 +20,10 @@ export default async function StoriesPage({ params }: StoriesPageProps) {
   if (!repoConfig) return notFound();
   if (repoConfig.sourceType !== sourceType) return notFound();
 
+  const gitlabToken = await getGitLabToken(userId);
   const project = await getCachedBmadProject(
     repoConfig,
-    {
-      githubToken: repoConfig.sourceType === "github" ? (await getGitHubToken(userId)) ?? undefined : undefined,
-      gitlabToken: repoConfig.sourceType === "gitlab" ? (await getGitLabToken(userId)) ?? undefined : undefined,
-    },
+    { gitlabToken: gitlabToken ?? undefined },
     userId,
   );
   if (!project) return notFound();

@@ -1,13 +1,12 @@
 import { redirect, notFound } from "next/navigation";
 import { getCachedBmadProject } from "@/lib/bmad/cached-project";
-import { getGitHubToken } from "@/lib/github/client";
 import { getGitLabToken } from "@/lib/gitlab/token";
 import { ProgressRing } from "@/components/shared/progress-ring";
 import { ProjectStatsGrid } from "@/components/dashboard/project-stats-grid";
 import { EpicsList } from "@/components/dashboard/epics-list";
 import { VelocityMetrics } from "@/components/dashboard/velocity-metrics";
 import { KeyArtifactsCard } from "@/components/dashboard/key-artifacts-card";
-import { GitBranch, Clock, FolderOpen } from "lucide-react";
+import { GitBranch, Clock } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { DeleteRepoButton } from "@/components/shared/delete-repo-button";
 import { RefreshRepoButton } from "@/components/shared/refresh-repo-button";
@@ -50,13 +49,10 @@ export default async function RepoOverviewPage({ params }: RepoPageProps) {
   if (!repoConfig) return notFound();
   if (repoConfig.sourceType !== sourceType) return notFound();
 
-  const isLocal = repoConfig.sourceType === "local";
+  const gitlabToken = await getGitLabToken();
   const project = await getCachedBmadProject(
     repoConfig,
-    {
-      githubToken: repoConfig.sourceType === "github" ? (await getGitHubToken(userId)) ?? undefined : undefined,
-      gitlabToken: repoConfig.sourceType === "gitlab" ? (await getGitLabToken(userId)) ?? undefined : undefined,
-    },
+    { gitlabToken: gitlabToken ?? undefined },
     userId,
   );
   if (!project) return notFound();
@@ -73,33 +69,21 @@ export default async function RepoOverviewPage({ params }: RepoPageProps) {
               {project.displayName}
             </h1>
             <RefreshRepoButton repoId={repoConfig.id} />
-            {!isLocal && (
-              <RepoSettingsModal
-                repoId={repoConfig.id}
-                displayName={project.displayName}
-                currentBranch={project.branch}
-              />
-            )}
+            <RepoSettingsModal
+              repoId={repoConfig.id}
+              displayName={project.displayName}
+              currentBranch={project.branch}
+            />
             <DeleteRepoButton
               repoId={repoConfig.id}
               displayName={project.displayName}
-              sourceType={repoConfig.sourceType}
             />
           </div>
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-            {isLocal ? (
-              <>
-                <FolderOpen className="h-4 w-4" />
-                <span>{repoConfig.localPath ?? "Local folder"}</span>
-              </>
-            ) : (
-              <>
-                <GitBranch className="h-4 w-4" />
-                <span>
-                  {project.owner}/{project.repo} ({project.branch})
-                </span>
-              </>
-            )}
+            <GitBranch className="h-4 w-4" />
+            <span>
+              {project.owner}/{project.repo} ({project.branch})
+            </span>
             {repoConfig.lastSyncedAt && (
               <>
                 <span className="text-muted-foreground/50">·</span>
