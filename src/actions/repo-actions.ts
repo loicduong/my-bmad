@@ -8,6 +8,14 @@ import {
   getCachedUserRepoTree,
   getCachedUserRawContent,
 } from "@/lib/github/client";
+import {
+  getCachedGitLabRawContent,
+  getCachedGitLabRepoTree,
+  getGitLabBranches,
+  getGitLabRepoTree,
+  listGitLabProjects,
+} from "@/lib/gitlab/client";
+import { getGitLabToken } from "@/lib/gitlab/token";
 import { LocalProvider } from "@/lib/content-provider/local-provider";
 import { buildFileTree } from "@/lib/bmad/utils";
 import { parseBmadFile } from "@/lib/bmad/parser";
@@ -18,6 +26,7 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import type { GitHubRepo } from "@/lib/github/types";
+import type { GitLabRepo } from "@/lib/gitlab/client";
 import type { FileTreeNode, ParsedBmadFile } from "@/lib/bmad/types";
 import type { ActionResult } from "@/lib/types";
 import { sanitizeError } from "@/lib/errors";
@@ -70,6 +79,55 @@ async function requireAuthenticated(): Promise<ActionResult<{ userId: string }>>
     return { success: false, error: "Not authenticated", code: "UNAUTHORIZED" };
   }
   return { success: true, data: { userId: session.userId } };
+}
+
+async function getAuthenticatedGitLabToken(): Promise<
+  ActionResult<{ token: string; userId: string }>
+> {
+  const session = await getAuthenticatedSession();
+  if (!session) {
+    return { success: false, error: "Not authenticated", code: "UNAUTHORIZED" };
+  }
+
+  const token = await getGitLabToken(session.userId);
+  if (!token) {
+    return {
+      success: false,
+      error: "GitLab OAuth token not found. Please reconnect.",
+      code: "TOKEN_MISSING",
+    };
+  }
+
+  return { success: true, data: { token, userId: session.userId } };
+}
+
+const repoIdentitySchema = z.union([
+  z.object({ repoId: z.string().min(1).trim() }),
+  z.object({
+    owner: z.string().min(1).max(255).trim(),
+    name: z.string().min(1).max(255).trim(),
+  }),
+]);
+
+type RepoIdentityInput =
+  | { repoId: string }
+  | { owner: string; name: string };
+
+async function findUserRepo(userId: string, input: RepoIdentityInput) {
+  return prisma.repo.findFirst({
+    where:
+      "repoId" in input
+        ? { userId, id: input.repoId }
+        : { userId, owner: input.owner, name: input.name },
+    select: {
+      id: true,
+      owner: true,
+      name: true,
+      branch: true,
+      sourceType: true,
+      localPath: true,
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -254,23 +312,121 @@ export async function importRepo(input: {
   }
 }
 
+export async function listGitLabRepos(): Promise<ActionResult<GitLabRepo[]>> {
+  const authResult = await getAuthenticatedGitLabToken();
+  if (!authResult.success) return authResult;
+
+  const { token, userId } = authResult.data;
+
+  if (!checkRateLimit(`list-gitlab:${userId}`, 30, 60000)) {
+    return { success: false, error: "Trop de requÃªtes", code: "RATE_LIMIT" };
+  }
+
+  try {
+    return { success: true, data: await listGitLabProjects(token) };
+  } catch (error: unknown) {
+    return { success: false, error: sanitizeError(error, "GITLAB_ERROR"), code: "GITLAB_ERROR" };
+  }
+}
+
+export async function detectGitLabBmadRepos(
+  repoIds: { fullName: string; owner: string; name: string; defaultBranch: string }[],
+): Promise<ActionResult<Record<string, boolean>>> {
+  const authResult = await getAuthenticatedGitLabToken();
+  if (!authResult.success) return authResult;
+
+  const { token } = authResult.data;
+  const results: Record<string, boolean> = {};
+
+  for (const repo of repoIds) {
+    try {
+      const tree = await getGitLabRepoTree(token, repo.owner, repo.name, repo.defaultBranch);
+      results[repo.fullName] = tree.some(
+        (item) =>
+          item.type === "tree" &&
+          !item.path.includes("/") &&
+          (item.path === BMAD_CORE || item.path === BMAD_OUTPUT),
+      );
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`[detectGitLabBmadRepos] ${repo.fullName} failed: ${msg}`);
+      results[repo.fullName] = false;
+    }
+  }
+
+  return { success: true, data: results };
+}
+
+export async function importGitLabRepo(input: {
+  owner: string;
+  name: string;
+  description: string | null;
+  defaultBranch: string;
+  fullName: string;
+}): Promise<
+  ActionResult<{ id: string; owner: string; name: string; displayName: string }>
+> {
+  const parsed = importRepoSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: "Invalid data: " + parsed.error.issues[0].message,
+      code: "VALIDATION_ERROR",
+    };
+  }
+  const data = parsed.data;
+
+  const authResult = await getAuthenticatedGitLabToken();
+  if (!authResult.success) return authResult;
+  const { userId } = authResult.data;
+
+  if (!checkRateLimit(`import-gitlab:${userId}`, 10, 60000)) {
+    return { success: false, error: "Trop de requÃªtes", code: "RATE_LIMIT" };
+  }
+
+  try {
+    const repo = await prisma.repo.create({
+      data: {
+        owner: data.owner,
+        name: data.name,
+        branch: data.defaultBranch,
+        displayName: data.name,
+        description: data.description,
+        sourceType: "gitlab",
+        lastSyncedAt: new Date(),
+        userId,
+      },
+      select: { id: true, owner: true, name: true, displayName: true },
+    });
+
+    revalidatePath("/(dashboard)");
+    return { success: true, data: repo };
+  } catch (error: unknown) {
+    if (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return {
+        success: false,
+        error: "This repository is already imported.",
+        code: "DUPLICATE",
+      };
+    }
+    return { success: false, error: sanitizeError(error, "DB_ERROR"), code: "DB_ERROR" };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Source-type-aware actions (GitHub + Local)
 // ---------------------------------------------------------------------------
 
-const deleteRepoSchema = z.object({
-  owner: z.string().min(1).max(255).trim(),
-  name: z.string().min(1).max(255).trim(),
-});
-
 /**
  * Delete an imported repo from the user's dashboard (GitHub or local).
  */
-export async function deleteRepo(input: {
-  owner: string;
-  name: string;
-}): Promise<ActionResult<{ deleted: boolean }>> {
-  const parsed = deleteRepoSchema.safeParse(input);
+export async function deleteRepo(
+  input: RepoIdentityInput,
+): Promise<ActionResult<{ deleted: boolean }>> {
+  const parsed = repoIdentitySchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Invalid data", code: "VALIDATION_ERROR" };
   }
@@ -283,7 +439,10 @@ export async function deleteRepo(input: {
   try {
     // F5: Always scope by userId
     const deleted = await prisma.repo.deleteMany({
-      where: { userId, owner: parsed.data.owner, name: parsed.data.name },
+      where:
+        "repoId" in parsed.data
+          ? { userId, id: parsed.data.repoId }
+          : { userId, owner: parsed.data.owner, name: parsed.data.name },
     });
 
     if (deleted.count === 0) {
@@ -297,20 +456,14 @@ export async function deleteRepo(input: {
   }
 }
 
-const refreshRepoSchema = z.object({
-  owner: z.string().min(1).max(255).trim(),
-  name: z.string().min(1).max(255).trim(),
-});
-
 /**
  * Refresh repo data: re-fetch tree, count BMAD files, update lastSyncedAt.
  * Routes by sourceType for GitHub vs Local repos.
  */
-export async function refreshRepoData(input: {
-  owner: string;
-  name: string;
-}): Promise<ActionResult<{ totalFiles: number; lastSyncedAt: string }>> {
-  const parsed = refreshRepoSchema.safeParse(input);
+export async function refreshRepoData(
+  input: RepoIdentityInput,
+): Promise<ActionResult<{ totalFiles: number; lastSyncedAt: string }>> {
+  const parsed = repoIdentitySchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Invalid data", code: "VALIDATION_ERROR" };
   }
@@ -320,11 +473,7 @@ export async function refreshRepoData(input: {
   const { userId } = authResult.data;
 
   try {
-    // F5: Always scope by userId
-    const repoConfig = await prisma.repo.findFirst({
-      where: { userId, owner: parsed.data.owner, name: parsed.data.name },
-      select: { id: true, branch: true, sourceType: true, localPath: true },
-    });
+    const repoConfig = await findUserRepo(userId, parsed.data);
 
     if (!repoConfig) {
       return { success: false, error: "Project not found", code: "NOT_FOUND" };
@@ -334,7 +483,7 @@ export async function refreshRepoData(input: {
       return refreshLocalRepo(repoConfig);
     }
 
-    return refreshGitHubRepo(parsed.data, repoConfig, userId);
+    return refreshRemoteRepo(repoConfig, userId);
   } catch (error: unknown) {
     if (
       typeof error === "object" &&
@@ -344,11 +493,11 @@ export async function refreshRepoData(input: {
     ) {
       return {
         success: false,
-        error: "GitHub rate limit reached. Cached data is displayed.",
+        error: "Provider rate limit reached. Cached data is displayed.",
         code: "RATE_LIMITED",
       };
     }
-    return { success: false, error: sanitizeError(error, "GITHUB_ERROR"), code: "GITHUB_ERROR" };
+    return { success: false, error: sanitizeError(error, "PROVIDER_ERROR"), code: "PROVIDER_ERROR" };
   }
 }
 
@@ -386,32 +535,41 @@ async function refreshLocalRepo(
   }
 }
 
-async function refreshGitHubRepo(
-  input: { owner: string; name: string },
-  repoConfig: { id: string; branch: string },
+async function refreshRemoteRepo(
+  repoConfig: { id: string; owner: string; name: string; branch: string; sourceType: string },
   userId: string,
 ): Promise<ActionResult<{ totalFiles: number; lastSyncedAt: string }>> {
-  const token = await getGitHubToken(userId);
-  if (!token) {
-    return { success: false, error: "GitHub OAuth token not found.", code: "TOKEN_MISSING" };
-  }
-  const octokit = createUserOctokit(token);
-
-  revalidateTag(repoTag(input.owner, input.name), "default");
+  revalidateTag(repoTag(repoConfig.sourceType, `${repoConfig.owner}/${repoConfig.name}`), "default");
 
   // Use the branch already configured for this repo — don't override it
   const syncBranch = repoConfig.branch;
 
-  const { data: tree } = await octokit.rest.git.getTree({
-    owner: input.owner,
-    repo: input.name,
-    tree_sha: syncBranch,
-    recursive: "1",
-  });
-
-  const totalFiles = tree.tree.filter(
-    (item) => item.type === "blob" && item.path?.startsWith("_bmad-output/")
-  ).length;
+  let totalFiles = 0;
+  if (repoConfig.sourceType === "gitlab") {
+    const token = await getGitLabToken(userId);
+    if (!token) {
+      return { success: false, error: "GitLab OAuth token not found.", code: "TOKEN_MISSING" };
+    }
+    const tree = await getGitLabRepoTree(token, repoConfig.owner, repoConfig.name, syncBranch);
+    totalFiles = tree.filter(
+      (item) => item.type === "blob" && item.path?.startsWith("_bmad-output/")
+    ).length;
+  } else {
+    const token = await getGitHubToken(userId);
+    if (!token) {
+      return { success: false, error: "GitHub OAuth token not found.", code: "TOKEN_MISSING" };
+    }
+    const octokit = createUserOctokit(token);
+    const { data: tree } = await octokit.rest.git.getTree({
+      owner: repoConfig.owner,
+      repo: repoConfig.name,
+      tree_sha: syncBranch,
+      recursive: "1",
+    });
+    totalFiles = tree.tree.filter(
+      (item) => item.type === "blob" && item.path?.startsWith("_bmad-output/")
+    ).length;
+  }
 
   const now = new Date();
   await prisma.repo.update({
@@ -426,19 +584,11 @@ async function refreshGitHubRepo(
 // BMAD file browsing Server Actions
 // ---------------------------------------------------------------------------
 
-const fetchBmadFilesSchema = z.object({
-  owner: z.string().min(1).max(255).trim(),
-  name: z.string().min(1).max(255).trim(),
-});
-
 /**
  * Fetch the BMAD file tree for a repo.
  * Routes by sourceType for GitHub vs Local.
  */
-export async function fetchBmadFiles(input: {
-  owner: string;
-  name: string;
-}): Promise<
+export async function fetchBmadFiles(input: RepoIdentityInput): Promise<
   ActionResult<{
     fileTree: FileTreeNode[];
     docsTree: FileTreeNode[];
@@ -446,7 +596,7 @@ export async function fetchBmadFiles(input: {
     bmadFiles: string[];
   }>
 > {
-  const parsed = fetchBmadFilesSchema.safeParse(input);
+  const parsed = repoIdentitySchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Invalid data", code: "VALIDATION_ERROR" };
   }
@@ -455,11 +605,7 @@ export async function fetchBmadFiles(input: {
   if (!authResult.success) return authResult;
   const { userId } = authResult.data;
 
-  // F5: Always scope by userId
-  const repoConfig = await prisma.repo.findFirst({
-    where: { userId, owner: parsed.data.owner, name: parsed.data.name },
-    select: { branch: true, sourceType: true, localPath: true },
-  });
+  const repoConfig = await findUserRepo(userId, parsed.data);
   if (!repoConfig) {
     return { success: false, error: "Project not found", code: "NOT_FOUND" };
   }
@@ -471,7 +617,7 @@ export async function fetchBmadFiles(input: {
       }
       return fetchBmadFilesLocal(repoConfig.localPath);
     }
-    return fetchBmadFilesGitHub(parsed.data, repoConfig.branch, userId);
+    return fetchBmadFilesRemote(repoConfig, userId);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
     if (msg === "PATH_NOT_FOUND" || msg === "LOCAL_DISABLED") {
@@ -485,11 +631,11 @@ export async function fetchBmadFiles(input: {
     ) {
       return {
         success: false,
-        error: "GitHub rate limit reached. Cached data is displayed.",
+        error: "Provider rate limit reached. Cached data is displayed.",
         code: "RATE_LIMITED",
       };
     }
-    return { success: false, error: sanitizeError(error, "GITHUB_ERROR"), code: "GITHUB_ERROR" };
+    return { success: false, error: sanitizeError(error, "PROVIDER_ERROR"), code: "PROVIDER_ERROR" };
   }
 }
 
@@ -519,26 +665,46 @@ async function fetchBmadFilesLocal(localPath: string) {
   return { success: true as const, data: { fileTree, docsTree, bmadCoreTree, bmadFiles: bmadPaths } };
 }
 
-async function fetchBmadFilesGitHub(
-  input: { owner: string; name: string },
-  branch: string,
+async function fetchBmadFilesRemote(
+  repoConfig: { owner: string; name: string; branch: string; sourceType: string },
   userId: string,
 ) {
-  const token = await getGitHubToken(userId);
-  if (!token) {
-    return { success: false as const, error: "GitHub OAuth token not found.", code: "TOKEN_MISSING" };
-  }
-  const octokit = createUserOctokit(token);
+  const tree =
+    repoConfig.sourceType === "gitlab"
+      ? await (async () => {
+          const token = await getGitLabToken(userId);
+          if (!token) {
+            throw Object.assign(new Error("GitLab OAuth token not found."), {
+              code: "TOKEN_MISSING",
+            });
+          }
+          return getCachedGitLabRepoTree(
+            token,
+            userId,
+            repoConfig.owner,
+            repoConfig.name,
+            repoConfig.branch,
+          );
+        })()
+      : await (async () => {
+          const token = await getGitHubToken(userId);
+          if (!token) {
+            throw Object.assign(new Error("GitHub OAuth token not found."), {
+              code: "TOKEN_MISSING",
+            });
+          }
+          const octokit = createUserOctokit(token);
+          const githubTree = await getCachedUserRepoTree(
+            octokit,
+            userId,
+            repoConfig.owner,
+            repoConfig.name,
+            repoConfig.branch,
+          );
+          return githubTree.tree;
+        })();
 
-  const tree = await getCachedUserRepoTree(
-    octokit,
-    userId,
-    input.owner,
-    input.name,
-    branch,
-  );
-
-  const allPaths = tree.tree
+  const allPaths = tree
     .filter((item) => item.type === "blob")
     .map((item) => item.path);
 
@@ -549,7 +715,7 @@ async function fetchBmadFilesGitHub(
   const bmadCoreTree = buildFileTree(bmadCorePaths, BMAD_CORE);
 
   // F20/F35: Detect docs/ via rootDirectories (from tree items)
-  const docsFolder = tree.tree.find(
+  const docsFolder = tree.find(
     (item) =>
       item.type === "tree" &&
       !item.path.includes("/") &&
@@ -567,14 +733,17 @@ async function fetchBmadFilesGitHub(
 }
 
 const fetchFileContentSchema = z.object({
-  owner: z.string().min(1).max(255).trim(),
-  name: z.string().min(1).max(255).trim(),
+  repoId: z.string().min(1).trim().optional(),
+  owner: z.string().min(1).max(255).trim().optional(),
+  name: z.string().min(1).max(255).trim().optional(),
   path: z
     .string()
     .min(1)
     .max(1024)
     .trim()
     .refine((p) => !p.includes(".."), { message: "Invalid path" }),
+}).refine((data) => !!data.repoId || (!!data.owner && !!data.name), {
+  message: "repoId or owner/name is required",
 });
 
 /**
@@ -582,8 +751,9 @@ const fetchFileContentSchema = z.object({
  * Routes by sourceType for GitHub vs Local.
  */
 export async function fetchFileContent(input: {
-  owner: string;
-  name: string;
+  repoId?: string;
+  owner?: string;
+  name?: string;
   path: string;
 }): Promise<
   ActionResult<{
@@ -604,11 +774,12 @@ export async function fetchFileContent(input: {
   if (!authResult.success) return authResult;
   const { userId } = authResult.data;
 
-  // F5: Always scope by userId
-  const repoConfig = await prisma.repo.findFirst({
-    where: { userId, owner: parsed.data.owner, name: parsed.data.name },
-    select: { branch: true, sourceType: true, localPath: true },
-  });
+  const repoConfig = await findUserRepo(
+    userId,
+    parsed.data.repoId
+      ? { repoId: parsed.data.repoId }
+      : { owner: parsed.data.owner!, name: parsed.data.name! },
+  );
   if (!repoConfig) {
     return { success: false, error: "Project not found", code: "NOT_FOUND" };
   }
@@ -628,6 +799,19 @@ export async function fetchFileContent(input: {
       }
       const provider = new LocalProvider(repoConfig.localPath);
       content = await provider.getFileContent(parsed.data.path);
+    } else if (repoConfig.sourceType === "gitlab") {
+      const token = await getGitLabToken(userId);
+      if (!token) {
+        return { success: false, error: "GitLab OAuth token not found.", code: "TOKEN_MISSING" };
+      }
+      content = await getCachedGitLabRawContent(
+        token,
+        userId,
+        repoConfig.owner,
+        repoConfig.name,
+        repoConfig.branch,
+        parsed.data.path,
+      );
     } else {
       const token = await getGitHubToken(userId);
       if (!token) {
@@ -637,8 +821,8 @@ export async function fetchFileContent(input: {
       content = await getCachedUserRawContent(
         octokit,
         userId,
-        parsed.data.owner,
-        parsed.data.name,
+        repoConfig.owner,
+        repoConfig.name,
         repoConfig.branch,
         parsed.data.path,
       );
@@ -657,13 +841,13 @@ export async function fetchFileContent(input: {
     ) {
       const status = (error as { status: number }).status;
       if (status === 403) {
-        return { success: false, error: "GitHub rate limit reached.", code: "RATE_LIMITED" };
+        return { success: false, error: "Provider rate limit reached.", code: "RATE_LIMITED" };
       }
       if (status === 404) {
         return { success: false, error: "File not found.", code: "NOT_FOUND" };
       }
     }
-    return { success: false, error: sanitizeError(error, "GITHUB_ERROR"), code: "GITHUB_ERROR" };
+    return { success: false, error: sanitizeError(error, "PROVIDER_ERROR"), code: "PROVIDER_ERROR" };
   }
 }
 
@@ -671,8 +855,9 @@ export async function fetchFileContent(input: {
  * Fetch and parse a BMAD file in a single server action call.
  */
 export async function fetchParsedFileContent(input: {
-  owner: string;
-  name: string;
+  repoId?: string;
+  owner?: string;
+  name?: string;
   path: string;
 }): Promise<ActionResult<ParsedBmadFile>> {
   const result = await fetchFileContent(input);
@@ -820,36 +1005,47 @@ export async function importLocalFolder(input: {
  * List available branches for a repo from GitHub.
  * F21: Returns error for local repos (no branch concept).
  */
-export async function listRepoBranches(input: {
-  owner: string;
-  name: string;
-}): Promise<ActionResult<string[]>> {
-  const authResult = await getAuthenticatedOctokit();
+export async function listRepoBranches(
+  input: RepoIdentityInput,
+): Promise<ActionResult<string[]>> {
+  const authResult = await requireAuthenticated();
   if (!authResult.success) return authResult;
 
-  const { octokit, userId } = authResult.data;
-  const parsed = z.object({ owner: z.string(), name: z.string() }).safeParse(input);
+  const { userId } = authResult.data;
+  const parsed = repoIdentitySchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Invalid input", code: "VALIDATION" };
   }
 
   // F21: Guard — local repos don't have branches
-  const repoConfig = await prisma.repo.findFirst({
-    where: { userId, owner: parsed.data.owner, name: parsed.data.name },
-    select: { sourceType: true },
-  });
-  if (repoConfig?.sourceType === "local") {
+  const repoConfig = await findUserRepo(userId, parsed.data);
+  if (!repoConfig) {
+    return { success: false, error: "Project not found", code: "NOT_FOUND" };
+  }
+  if (repoConfig.sourceType === "local") {
     return { success: false, error: "Branch management is not available for local projects", code: "NOT_APPLICABLE" };
   }
 
   try {
+    if (repoConfig.sourceType === "gitlab") {
+      const token = await getGitLabToken(userId);
+      if (!token) {
+        return { success: false, error: "GitLab OAuth token not found.", code: "TOKEN_MISSING" };
+      }
+      return { success: true, data: await getGitLabBranches(token, repoConfig.owner, repoConfig.name) };
+    }
+    const token = await getGitHubToken(userId);
+    if (!token) {
+      return { success: false, error: "GitHub OAuth token not found.", code: "TOKEN_MISSING" };
+    }
+    const octokit = createUserOctokit(token);
     const branches = await octokit.paginate(
       octokit.rest.repos.listBranches,
-      { owner: parsed.data.owner, repo: parsed.data.name, per_page: 100 },
+      { owner: repoConfig.owner, repo: repoConfig.name, per_page: 100 },
     );
     return { success: true, data: branches.map((b) => b.name) };
   } catch (error: unknown) {
-    return { success: false, error: sanitizeError(error, "GITHUB_ERROR"), code: "GITHUB_ERROR" };
+    return { success: false, error: sanitizeError(error, "PROVIDER_ERROR"), code: "PROVIDER_ERROR" };
   }
 }
 
@@ -858,26 +1054,27 @@ export async function listRepoBranches(input: {
  * F21: Returns error for local repos.
  */
 export async function updateRepoBranch(input: {
-  owner: string;
-  name: string;
+  repoId?: string;
+  owner?: string;
+  name?: string;
   branch: string;
 }): Promise<ActionResult<{ branch: string }>> {
-  const authResult = await getAuthenticatedOctokit();
+  const authResult = await requireAuthenticated();
   if (!authResult.success) return authResult;
 
   const { userId } = authResult.data;
   const parsed = z
-    .object({ owner: z.string(), name: z.string(), branch: z.string().min(1) })
+    .union([
+      z.object({ repoId: z.string().min(1), branch: z.string().min(1) }),
+      z.object({ owner: z.string(), name: z.string(), branch: z.string().min(1) }),
+    ])
     .safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Invalid input", code: "VALIDATION" };
   }
 
   // F21: Guard — local repos don't have branches
-  const repoConfig = await prisma.repo.findFirst({
-    where: { userId, owner: parsed.data.owner, name: parsed.data.name },
-    select: { id: true, sourceType: true },
-  });
+  const repoConfig = await findUserRepo(userId, parsed.data);
   if (!repoConfig) {
     return { success: false, error: "Project not found", code: "NOT_FOUND" };
   }
@@ -891,7 +1088,7 @@ export async function updateRepoBranch(input: {
       data: { branch: parsed.data.branch },
     });
 
-    revalidateTag(repoTag(parsed.data.owner, parsed.data.name), "default");
+    revalidateTag(repoTag(repoConfig.sourceType, `${repoConfig.owner}/${repoConfig.name}`), "default");
     revalidatePath("/(dashboard)");
 
     return { success: true, data: { branch: parsed.data.branch } };

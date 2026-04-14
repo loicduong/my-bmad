@@ -23,14 +23,14 @@ import {
 import { listRepoBranches, updateRepoBranch } from "@/actions/repo-actions";
 
 interface RepoSettingsModalProps {
-  owner: string;
-  name: string;
+  repoId: string;
+  displayName: string;
   currentBranch: string;
 }
 
 export function RepoSettingsModal({
-  owner,
-  name,
+  repoId,
+  displayName,
   currentBranch,
 }: RepoSettingsModalProps) {
   const router = useRouter();
@@ -49,7 +49,7 @@ export function RepoSettingsModal({
     if (nextOpen) {
       setSelectedBranch(currentBranch);
       setLoading(true);
-      const result = await listRepoBranches({ owner, name });
+      const result = await listRepoBranches({ repoId });
       setLoading(false);
       if (result.success) {
         setBranches(result.data);
@@ -68,8 +68,7 @@ export function RepoSettingsModal({
     setSaving(true);
     setError(null);
     const result = await updateRepoBranch({
-      owner,
-      name,
+      repoId,
       branch: selectedBranch,
     });
     setSaving(false);
@@ -100,10 +99,7 @@ export function RepoSettingsModal({
         <DialogHeader>
           <DialogTitle>Project settings</DialogTitle>
           <DialogDescription>
-            Configure the tracked branch for{" "}
-            <strong>
-              {owner}/{name}
-            </strong>
+            Configure the tracked branch for <strong>{displayName}</strong>
           </DialogDescription>
         </DialogHeader>
 

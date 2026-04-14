@@ -9,9 +9,10 @@ interface ReposGridProps {
   repos: RepoConfig[];
   localFsEnabled?: boolean;
   githubEnabled?: boolean;
+  gitlabEnabled?: boolean;
 }
 
-export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled }: ReposGridProps) {
+export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled, gitlabEnabled }: ReposGridProps) {
   if (repos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -21,7 +22,7 @@ export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled }: Re
         <p className="mt-2 text-sm text-muted-foreground mb-4">
           Add a BMAD repo to get started.
         </p>
-        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} />
+        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} gitlabEnabled={gitlabEnabled} />
       </div>
     );
   }
@@ -39,9 +40,7 @@ export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled }: Re
     );
   }
 
-  const descriptionMap = new Map(
-    repos.map((r) => [`${r.owner}/${r.name}`, r.description])
-  );
+  const repoMap = new Map(repos.map((r) => [r.id, r]));
 
   return (
     <StaggeredList className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initialDelay={0.2} staggerDelay={0.08}>
@@ -49,12 +48,14 @@ export function ReposGrid({ projects, repos, localFsEnabled, githubEnabled }: Re
         <StaggeredItem key={`${project.owner}/${project.repo}`}>
           <RepoCard
             project={project}
-            description={descriptionMap.get(`${project.owner}/${project.repo}`) ?? null}
+            description={repoMap.get(project.id)?.description ?? null}
+            sourceType={project.sourceType}
+            repoId={project.id}
           />
         </StaggeredItem>
       ))}
       <StaggeredItem>
-        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} />
+        <AddRepoCard localFsEnabled={localFsEnabled} githubEnabled={githubEnabled} gitlabEnabled={gitlabEnabled} />
       </StaggeredItem>
     </StaggeredList>
   );

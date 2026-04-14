@@ -3,11 +3,11 @@ import { DocsBrowser } from "@/components/docs/docs-browser";
 import { fetchBmadFiles } from "@/actions/repo-actions";
 import {
   getAuthenticatedUserId,
-  getAuthenticatedRepoConfig,
+  getAuthenticatedRepoConfigById,
 } from "@/lib/db/helpers";
 
 interface DocsPageProps {
-  params: Promise<{ owner: string; repo: string }>;
+  params: Promise<{ sourceType: string; repoId: string }>;
   searchParams: Promise<{ file?: string }>;
 }
 
@@ -15,15 +15,16 @@ export default async function DocsPage({
   params,
   searchParams,
 }: DocsPageProps) {
-  const { owner, repo: repoName } = await params;
+  const { sourceType, repoId } = await params;
   const { file: initialFile } = await searchParams;
   const userId = await getAuthenticatedUserId();
   if (!userId) redirect("/login");
 
-  const repoConfig = await getAuthenticatedRepoConfig(userId, owner, repoName);
+  const repoConfig = await getAuthenticatedRepoConfigById(userId, repoId);
   if (!repoConfig) return notFound();
+  if (repoConfig.sourceType !== sourceType) return notFound();
 
-  const result = await fetchBmadFiles({ owner, name: repoName });
+  const result = await fetchBmadFiles({ repoId: repoConfig.id });
 
   if (!result.success) {
     return (
@@ -56,8 +57,7 @@ export default async function DocsPage({
         fileTree={result.data.fileTree}
         docsTree={result.data.docsTree}
         bmadCoreTree={result.data.bmadCoreTree}
-        owner={owner}
-        repo={repoName}
+        repoId={repoConfig.id}
         initialSelectedFile={initialFile}
       />
     </div>

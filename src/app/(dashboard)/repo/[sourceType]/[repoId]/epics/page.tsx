@@ -1,27 +1,34 @@
 import { redirect, notFound } from "next/navigation";
 import { getCachedBmadProject } from "@/lib/bmad/cached-project";
 import { getGitHubToken } from "@/lib/github/client";
+import { getGitLabToken } from "@/lib/gitlab/token";
 import { EpicsBrowser } from "@/components/epics/epics-browser";
 import {
   getAuthenticatedUserId,
-  getAuthenticatedRepoConfig,
+  getAuthenticatedRepoConfigById,
 } from "@/lib/db/helpers";
 
 interface EpicsPageProps {
-  params: Promise<{ owner: string; repo: string }>;
+  params: Promise<{ sourceType: string; repoId: string }>;
 }
 
 export default async function EpicsPage({ params }: EpicsPageProps) {
-  const { owner, repo: repoName } = await params;
+  const { sourceType, repoId } = await params;
   const userId = await getAuthenticatedUserId();
   if (!userId) redirect("/login");
 
-  const repoConfig = await getAuthenticatedRepoConfig(userId, owner, repoName);
+  const repoConfig = await getAuthenticatedRepoConfigById(userId, repoId);
   if (!repoConfig) return notFound();
+  if (repoConfig.sourceType !== sourceType) return notFound();
 
-  const isLocal = repoConfig.sourceType === "local";
-  const token = isLocal ? undefined : (await getGitHubToken(userId)) ?? undefined;
-  const project = await getCachedBmadProject(repoConfig, token, userId);
+  const project = await getCachedBmadProject(
+    repoConfig,
+    {
+      githubToken: repoConfig.sourceType === "github" ? (await getGitHubToken(userId)) ?? undefined : undefined,
+      gitlabToken: repoConfig.sourceType === "gitlab" ? (await getGitLabToken(userId)) ?? undefined : undefined,
+    },
+    userId,
+  );
   if (!project) return notFound();
 
   const totalEpicProgress = project.epics.length > 0

@@ -24,7 +24,7 @@ export async function getBmadProject(
   config: RepoConfig,
   provider: ContentProvider,
 ): Promise<BmadProject | null> {
-  const { owner, name: repo, branch, displayName } = config;
+  const { id, owner, name: repo, sourceType, branch, displayName } = config;
 
   const providerTree = await provider.getTree();
   const allPaths = providerTree.paths;
@@ -177,6 +177,8 @@ export async function getBmadProject(
   const stats = computeProjectStats({
     owner,
     repo,
+    id,
+    sourceType,
     branch,
     displayName,
     sprintStatus,
@@ -189,8 +191,10 @@ export async function getBmadProject(
   });
 
   return {
+    id,
     owner,
     repo,
+    sourceType,
     branch,
     displayName,
     sprintStatus,

@@ -5,11 +5,15 @@ import { ParseErrorsDialog } from "@/components/shared/parse-errors-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { GitBranch, FolderOpen, BookOpen, Layers } from "lucide-react";
+import { getRepoHref } from "@/lib/repo-routes";
 import type { BmadProject, Epic } from "@/lib/bmad/types";
+import type { SourceType } from "@/lib/types";
 
 interface RepoCardProps {
   project: BmadProject;
   description: string | null;
+  sourceType: SourceType;
+  repoId: string;
 }
 
 function getBarColor(percent: number) {
@@ -48,12 +52,12 @@ function EpicSummaryRow({ epic }: { epic: Epic }) {
   );
 }
 
-export function RepoCard({ project, description }: RepoCardProps) {
+export function RepoCard({ project, description, sourceType, repoId }: RepoCardProps) {
   const visibleEpics = project.epics.slice(0, 3);
   const remainingEpics = Math.max(0, project.epics.length - 3);
 
   return (
-    <Link href={`/repo/${project.owner}/${project.repo}`}>
+    <Link href={getRepoHref(sourceType, repoId)}>
       <Card className="glass-card hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer h-full">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
@@ -65,13 +69,13 @@ export function RepoCard({ project, description }: RepoCardProps) {
                 )}
               </CardTitle>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {project.owner === "local" ? (
+                {sourceType === "local" ? (
                   <FolderOpen className="h-3 w-3" />
                 ) : (
                   <GitBranch className="h-3 w-3" />
                 )}
                 <span>
-                  {project.owner === "local"
+                  {sourceType === "local"
                     ? project.displayName
                     : `${project.owner}/${project.repo}`}
                 </span>

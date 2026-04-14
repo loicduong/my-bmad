@@ -91,8 +91,10 @@ export interface ParseHealthReport {
 }
 
 export interface BmadProject {
+  id: string;
   owner: string;
   repo: string;
+  sourceType: import("@/lib/types").SourceType;
   branch: string;
   displayName: string;
   sprintStatus: SprintStatus | null;

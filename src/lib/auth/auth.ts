@@ -11,6 +11,8 @@ if (process.env.NEXT_PHASE !== "phase-production-build") {
 
 const hasGitHubCredentials =
   !!process.env.GITHUB_CLIENT_ID && !!process.env.GITHUB_CLIENT_SECRET;
+const hasGitLabCredentials =
+  !!process.env.GITLAB_CLIENT_ID && !!process.env.GITLAB_CLIENT_SECRET;
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -19,13 +21,23 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  ...(hasGitHubCredentials && {
+  ...((hasGitHubCredentials || hasGitLabCredentials) && {
     socialProviders: {
-      github: {
-        clientId: process.env.GITHUB_CLIENT_ID!,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-        scope: ["repo", "read:user"],
-      },
+      ...(hasGitHubCredentials && {
+        github: {
+          clientId: process.env.GITHUB_CLIENT_ID!,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+          scope: ["repo", "read:user"],
+        },
+      }),
+      ...(hasGitLabCredentials && {
+        gitlab: {
+          clientId: process.env.GITLAB_CLIENT_ID!,
+          clientSecret: process.env.GITLAB_CLIENT_SECRET!,
+          issuer: process.env.GITLAB_ISSUER || "https://gitlab.com",
+          scope: ["read_api", "read_repository"],
+        },
+      }),
     },
   }),
   session: {

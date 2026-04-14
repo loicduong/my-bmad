@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { renderFileIcon } from "@/lib/bmad/file-icons";
 import type { FileTreeNode } from "@/lib/bmad/types";
+import { getRepoHref } from "@/lib/repo-routes";
+import type { SourceType } from "@/lib/types";
 
 function flattenFiles(nodes: FileTreeNode[]): FileTreeNode[] {
   const files: FileTreeNode[] = [];
@@ -18,14 +20,14 @@ function flattenFiles(nodes: FileTreeNode[]): FileTreeNode[] {
 
 interface KeyArtifactsCardProps {
   planningArtifacts: FileTreeNode[];
-  owner: string;
-  repo: string;
+  sourceType: SourceType;
+  repoId: string;
 }
 
 export function KeyArtifactsCard({
   planningArtifacts,
-  owner,
-  repo,
+  sourceType,
+  repoId,
 }: KeyArtifactsCardProps) {
   const files = flattenFiles(planningArtifacts);
 
@@ -41,7 +43,7 @@ export function KeyArtifactsCard({
         {files.map((file) => (
             <Link
               key={file.path}
-              href={`/repo/${owner}/${repo}/docs?file=${encodeURIComponent(file.path)}`}
+              href={`${getRepoHref(sourceType, repoId, "docs")}?file=${encodeURIComponent(file.path)}`}
               className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm hover:bg-accent transition-colors duration-300"
             >
               {renderFileIcon(file.name, "h-4 w-4 shrink-0 text-muted-foreground")}

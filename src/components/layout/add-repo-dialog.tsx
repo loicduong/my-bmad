@@ -24,20 +24,29 @@ import {
   FolderOpen,
   Loader2,
   Github,
+  Gitlab,
 } from "lucide-react";
 import {
   listUserRepos,
   detectBmadRepos,
   importRepo,
   importLocalFolder,
+  listGitLabRepos,
+  detectGitLabBmadRepos,
+  importGitLabRepo,
 } from "@/actions/repo-actions";
 import type { GitHubRepo } from "@/lib/github/types";
+import type { GitLabRepo } from "@/lib/gitlab/client";
+import type { SourceType } from "@/lib/types";
+
+type RemoteRepo = GitHubRepo | GitLabRepo;
 
 interface AddRepoDialogProps {
   trigger?: React.ReactNode;
-  importedRepos?: { owner: string; name: string }[];
+  importedRepos?: { sourceType: SourceType; owner: string; name: string }[];
   localFsEnabled?: boolean;
   githubEnabled?: boolean;
+  gitlabEnabled?: boolean;
 }
 
 export function AddRepoDialog({
@@ -45,27 +54,34 @@ export function AddRepoDialog({
   importedRepos = [],
   localFsEnabled = false,
   githubEnabled = true,
+  gitlabEnabled = false,
 }: AddRepoDialogProps) {
   const importedSet = useMemo(
-    () => new Set(importedRepos.map((r) => `${r.owner}/${r.name}`)),
+    () => new Set(importedRepos.map((r) => `${r.sourceType}:${r.owner}/${r.name}`)),
     [importedRepos]
   );
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [gitlabRepos, setGitLabRepos] = useState<GitLabRepo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [gitlabLoading, setGitLabLoading] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [gitlabDetecting, setGitLabDetecting] = useState(false);
   const [error, setError] = useState("");
+  const [gitlabError, setGitLabError] = useState("");
   const [search, setSearch] = useState("");
+  const [gitlabSearch, setGitLabSearch] = useState("");
   const [importing, setImporting] = useState<string | null>(null);
   const [importError, setImportError] = useState("");
+  const [gitlabImportError, setGitLabImportError] = useState("");
 
   // Local folder state
   const [localPath, setLocalPath] = useState("");
   const [localImporting, setLocalImporting] = useState(false);
   const [localError, setLocalError] = useState("");
 
-  const defaultTab = githubEnabled ? "github" : "local";
+  const defaultTab = githubEnabled ? "github" : gitlabEnabled ? "gitlab" : "local";
 
   const fetchRepos = useCallback(async () => {
     if (!githubEnabled) return;
@@ -114,10 +130,61 @@ export function AddRepoDialog({
     }
   }, [githubEnabled]);
 
+  const fetchGitLabRepos = useCallback(async () => {
+    if (!gitlabEnabled) return;
+    setGitLabLoading(true);
+    setGitLabError("");
+    setGitLabRepos([]);
+    setGitLabSearch("");
+    setGitLabDetecting(false);
+
+    const result = await listGitLabRepos();
+    if (!result.success) {
+      setGitLabError(result.error);
+      setGitLabLoading(false);
+      return;
+    }
+
+    setGitLabRepos(result.data);
+    setGitLabLoading(false);
+
+    if (result.data.length > 0) {
+      setGitLabDetecting(true);
+      const ids = result.data.map((r) => ({
+        fullName: r.fullName,
+        owner: r.owner,
+        name: r.name,
+        defaultBranch: r.defaultBranch,
+      }));
+
+      const bmadResult = await detectGitLabBmadRepos(ids);
+      if (bmadResult.success) {
+        setGitLabRepos((prev) => {
+          const updated = prev.map((r) => ({
+            ...r,
+            hasBmad: bmadResult.data[r.fullName] ?? false,
+          }));
+          updated.sort((a, b) => {
+            if (a.hasBmad !== b.hasBmad) return a.hasBmad ? -1 : 1;
+            return (
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime()
+            );
+          });
+          return updated;
+        });
+      }
+      setGitLabDetecting(false);
+    }
+  }, [gitlabEnabled]);
+
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     if (nextOpen && githubEnabled) {
       fetchRepos();
+    }
+    if (nextOpen && gitlabEnabled) {
+      fetchGitLabRepos();
     }
     if (!nextOpen) {
       setLocalPath("");
@@ -136,7 +203,17 @@ export function AddRepoDialog({
     );
   }, [repos, search]);
 
-  async function handleSelectRepo(repo: GitHubRepo) {
+  const gitlabFiltered = useMemo(() => {
+    if (!gitlabSearch.trim()) return gitlabRepos;
+    const q = gitlabSearch.toLowerCase();
+    return gitlabRepos.filter(
+      (r) =>
+        r.fullName.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q)
+    );
+  }, [gitlabRepos, gitlabSearch]);
+
+  async function handleSelectRepo(repo: RemoteRepo) {
     setImporting(repo.fullName);
     setImportError("");
 
@@ -153,6 +230,27 @@ export function AddRepoDialog({
       router.refresh();
     } else {
       setImportError(result.error);
+    }
+    setImporting(null);
+  }
+
+  async function handleSelectGitLabRepo(repo: RemoteRepo) {
+    setImporting(repo.fullName);
+    setGitLabImportError("");
+
+    const result = await importGitLabRepo({
+      owner: repo.owner,
+      name: repo.name,
+      description: repo.description,
+      defaultBranch: repo.defaultBranch,
+      fullName: repo.fullName,
+    });
+
+    if (result.success) {
+      setOpen(false);
+      router.refresh();
+    } else {
+      setGitLabImportError(result.error);
     }
     setImporting(null);
   }
@@ -175,7 +273,8 @@ export function AddRepoDialog({
     setLocalImporting(false);
   }
 
-  const showTabs = githubEnabled && localFsEnabled;
+  const enabledTabs = [githubEnabled, gitlabEnabled, localFsEnabled].filter(Boolean).length;
+  const showTabs = enabledTabs > 1;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -194,39 +293,85 @@ export function AddRepoDialog({
         {showTabs ? (
           <Tabs defaultValue={defaultTab}>
             <TabsList className="w-full">
-              <TabsTrigger value="github" className="flex-1">
-                <Github className="mr-1.5 h-4 w-4" />
-                GitHub
-              </TabsTrigger>
-              <TabsTrigger value="local" className="flex-1">
-                <FolderOpen className="mr-1.5 h-4 w-4" />
-                Local Folder
-              </TabsTrigger>
+              {githubEnabled && (
+                <TabsTrigger value="github" className="flex-1">
+                  <Github className="mr-1.5 h-4 w-4" />
+                  GitHub
+                </TabsTrigger>
+              )}
+              {gitlabEnabled && (
+                <TabsTrigger value="gitlab" className="flex-1">
+                  <Gitlab className="mr-1.5 h-4 w-4" />
+                  GitLab
+                </TabsTrigger>
+              )}
+              {localFsEnabled && (
+                <TabsTrigger value="local" className="flex-1">
+                  <FolderOpen className="mr-1.5 h-4 w-4" />
+                  Local Folder
+                </TabsTrigger>
+              )}
             </TabsList>
-            <TabsContent value="github">
-              <GitHubRepoList
-                search={search}
-                setSearch={setSearch}
-                loading={loading}
-                detecting={detecting}
-                error={error}
-                importError={importError}
-                filtered={filtered}
-                importing={importing}
-                importedSet={importedSet}
-                onSelect={handleSelectRepo}
-              />
-            </TabsContent>
-            <TabsContent value="local">
-              <LocalFolderForm
-                localPath={localPath}
-                setLocalPath={setLocalPath}
-                localImporting={localImporting}
-                localError={localError}
-                onSubmit={handleImportLocal}
-              />
-            </TabsContent>
+            {githubEnabled && (
+              <TabsContent value="github">
+                <GitHubRepoList
+                  sourceType="github"
+                  search={search}
+                  setSearch={setSearch}
+                  loading={loading}
+                  detecting={detecting}
+                  error={error}
+                  importError={importError}
+                  filtered={filtered}
+                  importing={importing}
+                  importedSet={importedSet}
+                  onSelect={handleSelectRepo}
+                />
+              </TabsContent>
+            )}
+            {gitlabEnabled && (
+              <TabsContent value="gitlab">
+                <GitHubRepoList
+                  sourceType="gitlab"
+                  search={gitlabSearch}
+                  setSearch={setGitLabSearch}
+                  loading={gitlabLoading}
+                  detecting={gitlabDetecting}
+                  error={gitlabError}
+                  importError={gitlabImportError}
+                  filtered={gitlabFiltered}
+                  importing={importing}
+                  importedSet={importedSet}
+                  onSelect={handleSelectGitLabRepo}
+                />
+              </TabsContent>
+            )}
+            {localFsEnabled && (
+              <TabsContent value="local">
+                <LocalFolderForm
+                  localPath={localPath}
+                  setLocalPath={setLocalPath}
+                  localImporting={localImporting}
+                  localError={localError}
+                  onSubmit={handleImportLocal}
+                />
+              </TabsContent>
+            )}
           </Tabs>
+        ) : gitlabEnabled ? (
+          <GitHubRepoList
+            sourceType="gitlab"
+            search={gitlabSearch}
+            setSearch={setGitLabSearch}
+            loading={gitlabLoading}
+            detecting={gitlabDetecting}
+            error={gitlabError}
+            importError={gitlabImportError}
+            filtered={gitlabFiltered}
+            importing={importing}
+            importedSet={importedSet}
+            onSelect={handleSelectGitLabRepo}
+          />
         ) : localFsEnabled ? (
           <LocalFolderForm
             localPath={localPath}
@@ -237,6 +382,7 @@ export function AddRepoDialog({
           />
         ) : (
           <GitHubRepoList
+            sourceType="github"
             search={search}
             setSearch={setSearch}
             loading={loading}
@@ -259,6 +405,7 @@ export function AddRepoDialog({
 // ---------------------------------------------------------------------------
 
 function GitHubRepoList({
+  sourceType,
   search,
   setSearch,
   loading,
@@ -270,16 +417,17 @@ function GitHubRepoList({
   importedSet,
   onSelect,
 }: {
+  sourceType: "github" | "gitlab";
   search: string;
   setSearch: (v: string) => void;
   loading: boolean;
   detecting: boolean;
   error: string;
   importError: string;
-  filtered: GitHubRepo[];
+  filtered: RemoteRepo[];
   importing: string | null;
   importedSet: Set<string>;
-  onSelect: (repo: GitHubRepo) => void;
+  onSelect: (repo: RemoteRepo) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -328,7 +476,7 @@ function GitHubRepoList({
             {filtered.map((repo) => {
               const isImporting = importing === repo.fullName;
               const isAlreadyImported = importedSet.has(
-                `${repo.owner}/${repo.name}`
+                `${sourceType}:${repo.owner}/${repo.name}`
               );
               const isDisabled = importing !== null || isAlreadyImported;
 

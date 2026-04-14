@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getCachedBmadProject } from "@/lib/bmad/cached-project";
 import { getGitHubToken } from "@/lib/github/client";
+import { getGitLabToken } from "@/lib/gitlab/token";
 import { ProgressRing } from "@/components/shared/progress-ring";
 import { ProjectStatsGrid } from "@/components/dashboard/project-stats-grid";
 import { EpicsList } from "@/components/dashboard/epics-list";
@@ -13,12 +14,12 @@ import { RefreshRepoButton } from "@/components/shared/refresh-repo-button";
 import { RepoSettingsModal } from "@/components/shared/repo-settings-modal";
 import {
   getAuthenticatedUserId,
-  getAuthenticatedRepoConfig,
+  getAuthenticatedRepoConfigById,
 } from "@/lib/db/helpers";
 import type { FileTreeNode } from "@/lib/bmad/types";
 
 interface RepoPageProps {
-  params: Promise<{ owner: string; repo: string }>;
+  params: Promise<{ sourceType: string; repoId: string }>;
 }
 
 function extractPlanningArtifacts(fileTree: FileTreeNode[]): FileTreeNode[] {
@@ -41,16 +42,23 @@ function getSprintProgress(project: {
 }
 
 export default async function RepoOverviewPage({ params }: RepoPageProps) {
-  const { owner, repo: repoName } = await params;
+  const { sourceType, repoId } = await params;
   const userId = await getAuthenticatedUserId();
   if (!userId) redirect("/login");
 
-  const repoConfig = await getAuthenticatedRepoConfig(userId, owner, repoName);
+  const repoConfig = await getAuthenticatedRepoConfigById(userId, repoId);
   if (!repoConfig) return notFound();
+  if (repoConfig.sourceType !== sourceType) return notFound();
 
   const isLocal = repoConfig.sourceType === "local";
-  const token = isLocal ? undefined : (await getGitHubToken(userId)) ?? undefined;
-  const project = await getCachedBmadProject(repoConfig, token, userId);
+  const project = await getCachedBmadProject(
+    repoConfig,
+    {
+      githubToken: repoConfig.sourceType === "github" ? (await getGitHubToken(userId)) ?? undefined : undefined,
+      gitlabToken: repoConfig.sourceType === "gitlab" ? (await getGitLabToken(userId)) ?? undefined : undefined,
+    },
+    userId,
+  );
   if (!project) return notFound();
 
   const planningArtifacts = extractPlanningArtifacts(project.fileTree);
@@ -64,18 +72,18 @@ export default async function RepoOverviewPage({ params }: RepoPageProps) {
             <h1 className="text-3xl font-bold tracking-tight">
               {project.displayName}
             </h1>
-            <RefreshRepoButton owner={owner} name={repoName} />
+            <RefreshRepoButton repoId={repoConfig.id} />
             {!isLocal && (
               <RepoSettingsModal
-                owner={owner}
-                name={repoName}
+                repoId={repoConfig.id}
+                displayName={project.displayName}
                 currentBranch={project.branch}
               />
             )}
             <DeleteRepoButton
-              owner={owner}
-              name={repoName}
+              repoId={repoConfig.id}
               displayName={project.displayName}
+              sourceType={repoConfig.sourceType}
             />
           </div>
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
@@ -127,12 +135,12 @@ export default async function RepoOverviewPage({ params }: RepoPageProps) {
       {/* Key documents */}
       <KeyArtifactsCard
         planningArtifacts={planningArtifacts}
-        owner={owner}
-        repo={repoName}
+        sourceType={repoConfig.sourceType}
+        repoId={repoConfig.id}
       />
 
       {/* Epics list */}
-      <EpicsList epics={project.epics} owner={owner} repo={repoName} />
+      <EpicsList epics={project.epics} sourceType={repoConfig.sourceType} repoId={repoConfig.id} />
     </div>
   );
 }
