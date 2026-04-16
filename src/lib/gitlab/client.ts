@@ -166,8 +166,8 @@ export async function listGitLabGroups(
   }>(accessToken, "/groups", {
     min_access_level: 10,
     top_level_only: false,
-    order_by: "last_activity_at",
-    sort: "desc",
+    order_by: "name",
+    sort: "asc",
     per_page: 100,
   });
 

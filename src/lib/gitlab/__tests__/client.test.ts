@@ -135,12 +135,12 @@ describe("GitLab client", () => {
     ]);
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "https://gitlab.com/api/v4/groups?min_access_level=10&top_level_only=false&order_by=last_activity_at&sort=desc&per_page=100",
+      "https://gitlab.com/api/v4/groups?min_access_level=10&top_level_only=false&order_by=name&sort=asc&per_page=100",
       { headers: { Authorization: "Bearer token" } },
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "https://gitlab.com/api/v4/groups?min_access_level=10&top_level_only=false&order_by=last_activity_at&sort=desc&per_page=100&page=2",
+      "https://gitlab.com/api/v4/groups?min_access_level=10&top_level_only=false&order_by=name&sort=asc&per_page=100&page=2",
       { headers: { Authorization: "Bearer token" } },
     );
   });
