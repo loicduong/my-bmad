@@ -42,4 +42,25 @@ describe("parseBmadFile csv", () => {
     expect(result.csv?.totalRows).toBe(1005);
     expect(result.csv?.truncated).toBe(true);
   });
+
+  it("does not create an empty row from a trailing newline", () => {
+    const result = parseBmadFile("Name,Status\nAlpha,Done\n", "csv");
+
+    expect(result.csv?.rows).toEqual([
+      ["Name", "Status"],
+      ["Alpha", "Done"],
+    ]);
+    expect(result.csv?.totalRows).toBe(2);
+  });
+
+  it("preserves empty rows inside the CSV", () => {
+    const result = parseBmadFile("Name,Status\n\nAlpha,Done\n", "csv");
+
+    expect(result.csv?.rows).toEqual([
+      ["Name", "Status"],
+      [""],
+      ["Alpha", "Done"],
+    ]);
+    expect(result.csv?.totalRows).toBe(3);
+  });
 });

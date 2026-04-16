@@ -18,6 +18,18 @@ const PLANNING = "planning-artifacts";
 const IMPLEMENTATION = "implementation-artifacts";
 const CSV_RENDER_ROW_LIMIT = 1000;
 
+function trimTrailingEmptyCsvRows(rows: string[][]): string[][] {
+  let lastContentIndex = rows.length - 1;
+  while (
+    lastContentIndex >= 0 &&
+    rows[lastContentIndex].every((cell) => cell.trim().length === 0)
+  ) {
+    lastContentIndex -= 1;
+  }
+
+  return rows.slice(0, lastContentIndex + 1);
+}
+
 /**
  * Parse a full BMAD project using a ContentProvider abstraction.
  * Works with both GitHub repos and local folders.
@@ -327,7 +339,9 @@ export function parseBmadFile(
           delimiter: "",
           skipEmptyLines: false,
         });
-        const allRows = parsed.data.map((row) => row.map((cell) => String(cell ?? "")));
+        const allRows = trimTrailingEmptyCsvRows(
+          parsed.data.map((row) => row.map((cell) => String(cell ?? ""))),
+        );
         const rows = allRows.slice(0, CSV_RENDER_ROW_LIMIT);
         const parseErrors = parsed.errors.map((error) => error.message);
         return {
