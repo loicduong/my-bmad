@@ -34,12 +34,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddRepoDialog } from "@/components/layout/add-repo-dialog";
 import { UserMenu } from "@/components/layout/user-menu";
-import { getRepoHref } from "@/lib/repo-routes";
-import type { RepoConfig } from "@/lib/types";
+import { getGroupHref } from "@/lib/repo-routes";
+import type { GroupConfig, RepoConfig } from "@/lib/types";
 
 const SUPER_ADMIN_EMAIL = "dev@dahmani.fr";
 
 interface AppSidebarProps {
+  groups: GroupConfig[];
   repos: RepoConfig[];
   userEmail?: string;
   gitlabEnabled?: boolean;
@@ -52,14 +53,14 @@ const projectTabs = [
   { label: "Library", segment: "docs", icon: FileText },
 ];
 
-export function AppSidebar({ repos, userEmail, gitlabEnabled }: AppSidebarProps) {
+export function AppSidebar({ groups, repos, userEmail, gitlabEnabled }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   // Track which repo key is expanded — only one at a time
   const activeRepoKey = useMemo(
-    () => repos.find((r) => pathname.startsWith(getRepoHref(r.sourceType, r.id))),
-    [repos, pathname]
+    () => groups.find((group) => pathname.startsWith(getGroupHref(group.sourceType, group.id))),
+    [groups, pathname]
   );
   const derivedOpenRepo = activeRepoKey
     ? activeRepoKey.id
@@ -106,11 +107,11 @@ export function AppSidebar({ repos, userEmail, gitlabEnabled }: AppSidebarProps)
           <SidebarGroupLabel>Projects</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {repos.map((repo) => {
-                const basePath = getRepoHref(repo.sourceType, repo.id);
+              {groups.map((group) => {
+                const basePath = getGroupHref(group.sourceType, group.id);
                 const isRepoActive = pathname.startsWith(basePath);
 
-                const repoKey = repo.id;
+                const repoKey = group.id;
 
                 return (
                   <Collapsible.Root
@@ -126,9 +127,9 @@ export function AppSidebar({ repos, userEmail, gitlabEnabled }: AppSidebarProps)
                   >
                     <SidebarMenuItem>
                       <Collapsible.Trigger asChild>
-                        <SidebarMenuButton isActive={isRepoActive} tooltip={repo.displayName}>
+                        <SidebarMenuButton isActive={isRepoActive} tooltip={group.displayName}>
                           <Gitlab className="h-4 w-4" />
-                          <span>{repo.displayName}</span>
+                          <span>{group.displayName}</span>
                           <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                         </SidebarMenuButton>
                       </Collapsible.Trigger>
@@ -175,6 +176,7 @@ export function AppSidebar({ repos, userEmail, gitlabEnabled }: AppSidebarProps)
         <div className="space-y-2 px-1 pb-2 group-data-[collapsible=icon]:hidden">
           <AddRepoDialog
             importedRepos={repos}
+            importedGroups={groups}
             gitlabEnabled={gitlabEnabled}
             trigger={
               <Button variant="outline" size="lg" className="w-full">

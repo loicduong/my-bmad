@@ -22,12 +22,14 @@ interface KeyArtifactsCardProps {
   planningArtifacts: FileTreeNode[];
   sourceType: SourceType;
   repoId: string;
+  hrefBase?: string;
 }
 
 export function KeyArtifactsCard({
   planningArtifacts,
   sourceType,
   repoId,
+  hrefBase,
 }: KeyArtifactsCardProps) {
   const files = flattenFiles(planningArtifacts);
 
@@ -43,7 +45,7 @@ export function KeyArtifactsCard({
         {files.map((file) => (
             <Link
               key={file.path}
-              href={`${getRepoHref(sourceType, repoId, "docs")}?file=${encodeURIComponent(file.path)}`}
+              href={`${hrefBase ?? getRepoHref(sourceType, repoId, "docs")}?file=${encodeURIComponent(file.path)}`}
               className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm hover:bg-accent transition-colors duration-300"
             >
               {renderFileIcon(file.name, "h-4 w-4 shrink-0 text-muted-foreground")}

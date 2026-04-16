@@ -1,33 +1,32 @@
 import { redirect } from "next/navigation";
-import { getBmadProject } from "@/lib/bmad/parser";
+import { getCachedBmadWorkspace } from "@/lib/bmad/cached-workspace";
 import { getGitLabToken } from "@/lib/gitlab/token";
-import { createContentProvider } from "@/lib/content-provider";
 import { ReposGrid } from "@/components/dashboard/repos-grid";
 import { GlobalStatsBar } from "@/components/dashboard/global-stats-bar";
 import {
   getAuthenticatedUserId,
-  getAuthenticatedRepos,
+  getAuthenticatedGroups,
 } from "@/lib/db/helpers";
 import { AlertBanner } from "@/components/shared/alert-banner";
-import type { BmadProject } from "@/lib/bmad/types";
+import type { BmadWorkspace } from "@/lib/bmad/types";
 
 export default async function DashboardPage() {
   const userId = await getAuthenticatedUserId();
   if (!userId) redirect("/login");
 
-  const repos = await getAuthenticatedRepos(userId);
+  const groups = await getAuthenticatedGroups(userId);
   const gitlabToken = await getGitLabToken(); // Now returns GITLAB_PAT or null
 
-  const projects: BmadProject[] = [];
+  const projects: BmadWorkspace[] = [];
   const errors: string[] = [];
   const results = await Promise.allSettled(
-    repos.map((repo) => {
-      const provider = createContentProvider(repo, {
-        gitlabToken: gitlabToken ?? undefined,
+    groups.map((group) =>
+      getCachedBmadWorkspace(
+        group,
+        { gitlabToken: gitlabToken ?? undefined },
         userId,
-      });
-      return getBmadProject(repo, provider);
-    })
+      ),
+    ),
   );
 
   for (let i = 0; i < results.length; i++) {
@@ -35,10 +34,10 @@ export default async function DashboardPage() {
     if (result.status === "fulfilled" && result.value !== null) {
       projects.push(result.value);
     } else if (result.status === "rejected") {
-      const repo = repos[i];
+      const group = groups[i];
       const msg = result.reason?.message || String(result.reason);
-      console.error(`Failed to fetch ${repo.owner}/${repo.name}:`, msg);
-      errors.push(`${repo.displayName}: ${msg}`);
+      console.error(`Failed to fetch ${group.fullPath}:`, msg);
+      errors.push(`${group.displayName}: ${msg}`);
     }
   }
 
@@ -50,7 +49,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Overview of all your BMAD projects
+            Overview of all your BMAD group workspaces
           </p>
         </div>
         {errors.length > 0 && (
@@ -75,7 +74,7 @@ export default async function DashboardPage() {
         {projects.length > 0 && <GlobalStatsBar projects={projects} />}
         <ReposGrid
           projects={projects}
-          repos={repos}
+          groups={groups}
           gitlabEnabled={!!process.env.GITLAB_PAT}
         />
       </div>

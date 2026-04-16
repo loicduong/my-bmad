@@ -1,5 +1,6 @@
 export type { ContentProvider, ContentProviderTree } from "./types";
 export { GitLabProvider } from "./gitlab-provider";
+export { LocalProvider } from "./local-provider";
 
 import type { ContentProvider } from "./types";
 import type { RepoConfig } from "@/lib/types";

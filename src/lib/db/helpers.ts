@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/auth";
 
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db/client";
-import type { RepoConfig, ActionResult, UserRole } from "@/lib/types";
+import type { GroupConfig, RepoConfig, ActionResult, UserRole } from "@/lib/types";
 
 /**
  * Get the authenticated session with userId and role. Cached per request via React cache().
@@ -51,11 +51,61 @@ export const getAuthenticatedRepos = cache(
   async (userId: string): Promise<RepoConfig[]> => {
     const rows = await prisma.repo.findMany({
       where: { userId },
-      select: { id: true, owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, lastSyncedAt: true },
+      select: {
+        id: true,
+        owner: true,
+        name: true,
+        fullPath: true,
+        branch: true,
+        displayName: true,
+        description: true,
+        sourceType: true,
+        localPath: true,
+        lastSyncedAt: true,
+        groupId: true,
+        role: true,
+      },
       orderBy: { createdAt: "desc" },
     });
     return rows as RepoConfig[];
   }
+);
+
+export const getAuthenticatedGroups = cache(
+  async (userId: string): Promise<GroupConfig[]> => {
+    const rows = await prisma.bmadGroup.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        sourceType: true,
+        gitlabGroupId: true,
+        fullPath: true,
+        name: true,
+        displayName: true,
+        description: true,
+        lastSyncedAt: true,
+        repos: {
+          select: {
+            id: true,
+            owner: true,
+            name: true,
+            fullPath: true,
+            branch: true,
+            displayName: true,
+            description: true,
+            sourceType: true,
+            localPath: true,
+            lastSyncedAt: true,
+            groupId: true,
+            role: true,
+          },
+          orderBy: [{ role: "asc" }, { fullPath: "asc" }],
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return rows as GroupConfig[];
+  },
 );
 
 /**
@@ -70,7 +120,20 @@ export const getAuthenticatedRepoConfig = cache(
   ): Promise<RepoConfig | null> => {
     const row = await prisma.repo.findFirst({
       where: { userId, owner, name },
-      select: { id: true, owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, lastSyncedAt: true },
+      select: {
+        id: true,
+        owner: true,
+        name: true,
+        fullPath: true,
+        branch: true,
+        displayName: true,
+        description: true,
+        sourceType: true,
+        localPath: true,
+        lastSyncedAt: true,
+        groupId: true,
+        role: true,
+      },
     });
     return row as RepoConfig | null;
   }
@@ -80,8 +143,57 @@ export const getAuthenticatedRepoConfigById = cache(
   async (userId: string, repoId: string): Promise<RepoConfig | null> => {
     const row = await prisma.repo.findFirst({
       where: { userId, id: repoId },
-      select: { id: true, owner: true, name: true, branch: true, displayName: true, description: true, sourceType: true, lastSyncedAt: true },
+      select: {
+        id: true,
+        owner: true,
+        name: true,
+        fullPath: true,
+        branch: true,
+        displayName: true,
+        description: true,
+        sourceType: true,
+        localPath: true,
+        lastSyncedAt: true,
+        groupId: true,
+        role: true,
+      },
     });
     return row as RepoConfig | null;
   }
+);
+
+export const getAuthenticatedGroupConfigById = cache(
+  async (userId: string, groupId: string): Promise<GroupConfig | null> => {
+    const row = await prisma.bmadGroup.findFirst({
+      where: { userId, id: groupId },
+      select: {
+        id: true,
+        sourceType: true,
+        gitlabGroupId: true,
+        fullPath: true,
+        name: true,
+        displayName: true,
+        description: true,
+        lastSyncedAt: true,
+        repos: {
+          select: {
+            id: true,
+            owner: true,
+            name: true,
+            fullPath: true,
+            branch: true,
+            displayName: true,
+            description: true,
+            sourceType: true,
+            localPath: true,
+            lastSyncedAt: true,
+            groupId: true,
+            role: true,
+          },
+          orderBy: [{ role: "asc" }, { fullPath: "asc" }],
+        },
+      },
+    });
+    return row as GroupConfig | null;
+  },
 );

@@ -5,6 +5,7 @@ import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { redirect } from "next/navigation";
 import {
   getAuthenticatedSession,
+  getAuthenticatedGroups,
   getAuthenticatedRepos,
 } from "@/lib/db/helpers";
 
@@ -16,7 +17,10 @@ export default async function DashboardLayout({
   const session = await getAuthenticatedSession();
   if (!session) redirect("/login");
 
-  const repos = await getAuthenticatedRepos(session.userId);
+  const [groups, repos] = await Promise.all([
+    getAuthenticatedGroups(session.userId),
+    getAuthenticatedRepos(session.userId),
+  ]);
 
   // GitLab is considered enabled if the PAT is set
   const gitlabEnabled = !!process.env.GITLAB_PAT;
@@ -25,6 +29,7 @@ export default async function DashboardLayout({
     <BreadcrumbProvider>
       <SidebarProvider>
         <AppSidebar
+          groups={groups}
           repos={repos}
           userEmail={session.email}
           gitlabEnabled={gitlabEnabled}

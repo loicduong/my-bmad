@@ -12,10 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { refreshRepoData } from "@/actions/repo-actions";
+import { refreshBmadGroup, refreshRepoData } from "@/actions/repo-actions";
 
 interface RefreshRepoButtonProps {
-  repoId: string;
+  repoId?: string;
+  groupId?: string;
 }
 
 function formatFileCount(count: number): string {
@@ -23,13 +24,14 @@ function formatFileCount(count: number): string {
   return `${count} BMAD file${count > 1 ? "s" : ""} detected.`;
 }
 
-export function RefreshRepoButton({ repoId }: RefreshRepoButtonProps) {
+export function RefreshRepoButton({ repoId, groupId }: RefreshRepoButtonProps) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
     totalFiles?: number;
+    reposCount?: number;
     error?: string;
     code?: string;
   } | null>(null);
@@ -37,9 +39,15 @@ export function RefreshRepoButton({ repoId }: RefreshRepoButtonProps) {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const res = await refreshRepoData({ repoId });
+      const res = groupId
+        ? await refreshBmadGroup({ groupId })
+        : await refreshRepoData({ repoId: repoId! });
       if (res.success) {
-        setResult({ success: true, totalFiles: res.data.totalFiles });
+        setResult({
+          success: true,
+          totalFiles: "totalFiles" in res.data ? res.data.totalFiles : undefined,
+          reposCount: "reposCount" in res.data ? res.data.reposCount : undefined,
+        });
       } else {
         setResult({ success: false, error: res.error, code: res.code });
       }
@@ -80,7 +88,9 @@ export function RefreshRepoButton({ repoId }: RefreshRepoButtonProps) {
                   <DialogTitle>Refresh successful</DialogTitle>
                 </div>
                 <DialogDescription>
-                  {formatFileCount(result.totalFiles ?? 0)}
+                  {result.reposCount
+                    ? `${result.reposCount} repo${result.reposCount > 1 ? "s" : ""} refreshed.`
+                    : formatFileCount(result.totalFiles ?? 0)}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
