@@ -779,7 +779,7 @@ export async function fetchFileContent(input: {
 }): Promise<
   ActionResult<{
     content: string;
-    contentType: "markdown" | "yaml" | "json" | "text";
+    contentType: "markdown" | "yaml" | "json" | "csv" | "text";
   }>
 > {
   const parsed = fetchFileContentSchema.safeParse(input);
@@ -809,10 +809,11 @@ export async function fetchFileContent(input: {
   }
 
   const ext = parsed.data.path.split(".").pop()?.toLowerCase() ?? "";
-  let contentType: "markdown" | "yaml" | "json" | "text" = "text";
+  let contentType: "markdown" | "yaml" | "json" | "csv" | "text" = "text";
   if (ext === "md") contentType = "markdown";
   else if (ext === "yaml" || ext === "yml") contentType = "yaml";
   else if (ext === "json") contentType = "json";
+  else if (ext === "csv") contentType = "csv";
 
   try {
     const token = await getGitLabToken(userId);

@@ -11,10 +11,12 @@ import type { ParsedBmadFile, BmadFileMetadata } from "./types";
 import { normalizeStoryStatus } from "./utils";
 import matter from "gray-matter";
 import yaml from "js-yaml";
+import Papa from "papaparse";
 
 const BMAD_OUTPUT = "_bmad-output";
 const PLANNING = "planning-artifacts";
 const IMPLEMENTATION = "implementation-artifacts";
+const CSV_RENDER_ROW_LIMIT = 1000;
 
 /**
  * Parse a full BMAD project using a ContentProvider abstraction.
@@ -277,7 +279,7 @@ function extractMetadata(
  */
 export function parseBmadFile(
   content: string,
-  contentType: "markdown" | "yaml" | "json" | "text",
+  contentType: "markdown" | "yaml" | "json" | "csv" | "text",
 ): ParsedBmadFile {
   try {
     switch (contentType) {
@@ -316,6 +318,30 @@ export function parseBmadFile(
           frontmatter: null,
           metadata: null,
           body: JSON.stringify(parsed, null, 2),
+          rawContent: content,
+          parseError: null,
+        };
+      }
+      case "csv": {
+        const parsed = Papa.parse<string[]>(content, {
+          delimiter: "",
+          skipEmptyLines: false,
+        });
+        const allRows = parsed.data.map((row) => row.map((cell) => String(cell ?? "")));
+        const rows = allRows.slice(0, CSV_RENDER_ROW_LIMIT);
+        const parseErrors = parsed.errors.map((error) => error.message);
+        return {
+          contentType,
+          frontmatter: null,
+          metadata: null,
+          csv: {
+            rows,
+            totalRows: allRows.length,
+            columnCount: rows.reduce((max, row) => Math.max(max, row.length), 0),
+            truncated: allRows.length > CSV_RENDER_ROW_LIMIT,
+            parseErrors,
+          },
+          body: content,
           rawContent: content,
           parseError: null,
         };

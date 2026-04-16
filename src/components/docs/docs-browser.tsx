@@ -5,6 +5,7 @@ import { FileTree } from "./file-tree";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { TableOfContents } from "./table-of-contents";
 import { FileMetadataBar } from "./file-metadata-bar";
+import { CsvTableRenderer } from "./csv-table-renderer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -284,6 +285,8 @@ function FilePanel({
                   <CodeRenderer content={parsedFile.body} language="yaml" />
                 ) : parsedFile.contentType === "json" ? (
                   <CodeRenderer content={parsedFile.body} language="json" />
+                ) : parsedFile.contentType === "csv" && parsedFile.csv ? (
+                  <CsvTableRenderer csv={parsedFile.csv} />
                 ) : (
                   <pre className="text-sm font-mono whitespace-pre-wrap">
                     {parsedFile.body}

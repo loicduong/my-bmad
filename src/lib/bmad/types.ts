@@ -70,9 +70,16 @@ export type BmadFileMetadata = {
 };
 
 export type ParsedBmadFile = {
-  contentType: "markdown" | "yaml" | "json" | "text";
+  contentType: "markdown" | "yaml" | "json" | "csv" | "text";
   frontmatter: Record<string, unknown> | null;
   metadata: BmadFileMetadata | null;
+  csv?: {
+    rows: string[][];
+    totalRows: number;
+    columnCount: number;
+    truncated: boolean;
+    parseErrors: string[];
+  };
   body: string;
   rawContent: string;
   parseError: string | null;
