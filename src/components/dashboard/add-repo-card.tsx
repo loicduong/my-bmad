@@ -18,7 +18,7 @@ export function AddRepoCard({ gitlabEnabled }: AddRepoCardProps) {
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Image src="/logo_mybmad.png" alt="MyBMAD" width={96} height={96} />
             <Plus className="h-8 w-8" />
-            <span className="text-sm font-medium">Add a project</span>
+            <span className="text-sm font-medium">Add a group</span>
           </div>
         </Card>
       }

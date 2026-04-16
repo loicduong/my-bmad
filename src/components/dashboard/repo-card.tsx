@@ -5,7 +5,6 @@ import { ParseErrorsDialog } from "@/components/shared/parse-errors-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { GitBranch, BookOpen, Layers } from "lucide-react";
-import { getRepoHref } from "@/lib/repo-routes";
 import type { BmadProject, Epic } from "@/lib/bmad/types";
 import type { SourceType } from "@/lib/types";
 
@@ -14,6 +13,9 @@ interface RepoCardProps {
   description: string | null;
   sourceType: SourceType;
   repoId: string;
+  href: string;
+  subtitle?: string;
+  reposCount?: number;
 }
 
 function getBarColor(percent: number) {
@@ -52,16 +54,15 @@ function EpicSummaryRow({ epic }: { epic: Epic }) {
   );
 }
 
-export function RepoCard({ project, description, sourceType, repoId }: RepoCardProps) {
+export function RepoCard({ project, description, href, subtitle, reposCount }: RepoCardProps) {
   const visibleEpics = project.epics.slice(0, 3);
   const remainingEpics = Math.max(0, project.epics.length - 3);
-  const repoHref = getRepoHref(sourceType, repoId);
 
   return (
     <Card className="glass-card relative hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 group h-full overflow-hidden">
       {/* Absolute overlay link for the entire card */}
       <Link 
-        href={repoHref} 
+        href={href}
         className="absolute inset-0 z-0" 
         aria-label={`View details for ${project.displayName}`}
       />
@@ -80,7 +81,7 @@ export function RepoCard({ project, description, sourceType, repoId }: RepoCardP
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <GitBranch className="h-3 w-3" />
               <span>
-                 {project.owner}/{project.repo}
+                 {subtitle ?? `${project.owner}/${project.repo}`}
               </span>
             </div>
             {description && (
@@ -97,7 +98,9 @@ export function RepoCard({ project, description, sourceType, repoId }: RepoCardP
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Layers className="h-3.5 w-3.5" />
-            <span>{project.epics.length} epics</span>
+            <span>
+              {reposCount ? `${reposCount} repos` : `${project.epics.length} epics`}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <BookOpen className="h-3.5 w-3.5" />

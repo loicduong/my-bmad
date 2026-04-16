@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -15,130 +15,115 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Search as SearchIcon,
-  Lock as LockIcon,
+  Gitlab,
   Globe as GlobeIcon,
-  FolderGit2 as GitIcon,
-  Plus as PlusIcon,
   Loader2 as LoaderIcon,
+  Lock as LockIcon,
+  Plus as PlusIcon,
+  Search as SearchIcon,
 } from "lucide-react";
 import {
-  listGitLabRepos,
-  detectGitLabBmadRepos,
-  importGitLabRepo,
+  importGitLabGroup,
+  listGitLabGroups,
+  previewGitLabGroupBmadProjects,
 } from "@/actions/repo-actions";
-import type { GitLabRepo } from "@/lib/gitlab/client";
-import type { SourceType } from "@/lib/types";
+import type { GitLabBmadProject, GitLabGroup } from "@/lib/gitlab/client";
+import type { GroupConfig, RepoConfig } from "@/lib/types";
 
 interface AddRepoDialogProps {
   trigger?: React.ReactNode;
-  importedRepos?: { sourceType: SourceType; owner: string; name: string }[];
+  importedRepos?: RepoConfig[];
+  importedGroups?: GroupConfig[];
   gitlabEnabled?: boolean;
 }
 
 export function AddRepoDialog({
   trigger,
-  importedRepos = [],
+  importedGroups = [],
   gitlabEnabled = false,
 }: AddRepoDialogProps) {
-  const importedSet = useMemo(
-    () => new Set(importedRepos.map((r) => `${r.sourceType}:${r.owner}/${r.name}`)),
-    [importedRepos]
-  );
   const router = useRouter();
+  const importedSet = useMemo(
+    () => new Set(importedGroups.map((group) => group.fullPath)),
+    [importedGroups],
+  );
+
   const [open, setOpen] = useState(false);
-  const [gitlabRepos, setGitLabRepos] = useState<GitLabRepo[]>([]);
-  const [gitlabLoading, setGitLabLoading] = useState(false);
-  const [gitlabDetecting, setGitLabDetecting] = useState(false);
-  const [gitlabError, setGitLabError] = useState("");
-  const [gitlabSearch, setGitLabSearch] = useState("");
-  const [importing, setImporting] = useState<string | null>(null);
-  const [gitlabImportError, setGitLabImportError] = useState("");
+  const [groups, setGroups] = useState<GitLabGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<GitLabGroup | null>(null);
+  const [previewProjects, setPreviewProjects] = useState<GitLabBmadProject[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState("");
 
-  const fetchGitLabRepos = useCallback(async () => {
+  const fetchGroups = useCallback(async () => {
     if (!gitlabEnabled) return;
-    setGitLabLoading(true);
-    setGitLabError("");
-    setGitLabRepos([]);
-    setGitLabSearch("");
-    setGitLabDetecting(false);
+    setLoading(true);
+    setError("");
+    setGroups([]);
+    setSelectedGroup(null);
+    setPreviewProjects([]);
 
-    const result = await listGitLabRepos();
-    if (!result.success) {
-      setGitLabError(result.error);
-      setGitLabLoading(false);
-      return;
+    const result = await listGitLabGroups();
+    if (result.success) {
+      setGroups(result.data);
+    } else {
+      setError(result.error);
     }
-
-    setGitLabRepos(result.data);
-    setGitLabLoading(false);
-
-    if (result.data.length > 0) {
-      setGitLabDetecting(true);
-      const ids = result.data.map((r) => ({
-        fullName: r.fullName,
-        owner: r.owner,
-        name: r.name,
-        defaultBranch: r.defaultBranch,
-      }));
-
-      const bmadResult = await detectGitLabBmadRepos(ids);
-      if (bmadResult.success) {
-        setGitLabRepos((prev) => {
-          const updated = prev.map((r) => ({
-            ...r,
-            hasBmad: bmadResult.data[r.fullName] ?? false,
-          }));
-          updated.sort((a, b) => {
-            if (a.hasBmad !== b.hasBmad) return a.hasBmad ? -1 : 1;
-            return (
-              new Date(b.updatedAt).getTime() -
-              new Date(a.updatedAt).getTime()
-            );
-          });
-          return updated;
-        });
-      }
-      setGitLabDetecting(false);
-    }
+    setLoading(false);
   }, [gitlabEnabled]);
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     if (nextOpen) {
-      fetchGitLabRepos();
+      fetchGroups();
     }
   }
 
-  const gitlabFiltered = useMemo(() => {
-    if (!gitlabSearch.trim()) return gitlabRepos;
-    const q = gitlabSearch.toLowerCase();
-    return gitlabRepos.filter(
-      (r) =>
-        r.fullName.toLowerCase().includes(q) ||
-        r.description?.toLowerCase().includes(q)
+  const filteredGroups = useMemo(() => {
+    if (!search.trim()) return groups;
+    const q = search.toLowerCase();
+    return groups.filter(
+      (group) =>
+        group.fullPath.toLowerCase().includes(q) ||
+        group.description?.toLowerCase().includes(q),
     );
-  }, [gitlabRepos, gitlabSearch]);
+  }, [groups, search]);
 
-  async function handleSelectGitLabRepo(repo: GitLabRepo) {
-    setImporting(repo.fullName);
-    setGitLabImportError("");
-
-    const result = await importGitLabRepo({
-      owner: repo.owner,
-      name: repo.name,
-      description: repo.description,
-      defaultBranch: repo.defaultBranch,
-      fullName: repo.fullName,
+  async function handlePreview(group: GitLabGroup) {
+    setSelectedGroup(group);
+    setPreviewProjects([]);
+    setPreviewing(true);
+    setError("");
+    const result = await previewGitLabGroupBmadProjects({
+      groupId: group.id,
+      fullPath: group.fullPath,
     });
+    if (result.success) {
+      setPreviewProjects(result.data.projects);
+    } else {
+      setError(result.error);
+    }
+    setPreviewing(false);
+  }
 
+  async function handleImport() {
+    if (!selectedGroup || previewProjects.length === 0) return;
+    setImporting(true);
+    setError("");
+    const result = await importGitLabGroup({
+      group: selectedGroup,
+      projects: previewProjects,
+    });
+    setImporting(false);
     if (result.success) {
       setOpen(false);
       router.refresh();
     } else {
-      setGitLabImportError(result.error);
+      setError(result.error);
     }
-    setImporting(null);
   }
 
   return (
@@ -150,107 +135,138 @@ export function AddRepoDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add a GitLab project</DialogTitle>
+          <DialogTitle>Add a GitLab group</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="relative">
             <SearchIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
-              placeholder="Search for a repository..."
-              value={gitlabSearch}
-              onChange={(e) => setGitLabSearch(e.target.value)}
+              placeholder="Search for a group..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
-              disabled={gitlabLoading}
+              disabled={loading}
             />
           </div>
 
-          {gitlabError && <p className="text-destructive text-sm">{gitlabError}</p>}
-          {gitlabImportError && <p className="text-destructive text-sm">{gitlabImportError}</p>}
-          {gitlabDetecting && (
-            <p className="text-muted-foreground text-xs animate-pulse">
-              Detecting BMAD files...
-            </p>
-          )}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
-          <ScrollArea className="h-80">
-            {gitlabLoading ? (
-              <div className="space-y-3 p-1">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 rounded-lg border p-3"
-                  >
-                    <Skeleton className="h-8 w-8 rounded" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+            <ScrollArea className="h-96">
+              {loading ? (
+                <div className="space-y-3 p-1">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-1 p-1">
-                {gitlabFiltered.length === 0 && !gitlabError && (
-                  <p className="text-muted-foreground py-8 text-center text-sm">
-                    {gitlabSearch ? "No repository found" : "No repository available (verify your PAT)"}
-                  </p>
-                )}
-                {gitlabFiltered.map((repo) => {
-                  const isImporting = importing === repo.fullName;
-                  const isAlreadyImported = importedSet.has(
-                    `gitlab:${repo.owner}/${repo.name}`
-                  );
-                  const isDisabled = importing !== null || isAlreadyImported;
-
-                  return (
-                    <button
-                      key={repo.id}
-                      type="button"
-                      onClick={() => handleSelectGitLabRepo(repo)}
-                      disabled={isDisabled}
-                      className="hover:bg-accent flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors disabled:pointer-events-none disabled:opacity-50"
-                    >
-                      {isImporting ? (
-                        <LoaderIcon className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0 animate-spin" />
-                      ) : (
-                        <GitIcon className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-sm font-medium">
-                            {repo.fullName}
-                          </span>
-                          {isAlreadyImported && (
-                            <Badge variant="secondary" className="shrink-0 text-xs">
-                              Imported
-                            </Badge>
-                          )}
-                          {repo.hasBmad && !isAlreadyImported && (
-                            <Badge variant="default" className="shrink-0 text-xs">
-                              BMAD
-                            </Badge>
-                          )}
-                          {repo.isPrivate ? (
-                            <LockIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                          ) : (
-                            <GlobeIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1 p-1">
+                  {filteredGroups.length === 0 && !error && (
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      {search ? "No group found" : "No group available"}
+                    </p>
+                  )}
+                  {filteredGroups.map((group) => {
+                    const isAlreadyImported = importedSet.has(group.fullPath);
+                    const isSelected = selectedGroup?.fullPath === group.fullPath;
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => handlePreview(group)}
+                        disabled={previewing || importing || isAlreadyImported}
+                        className="hover:bg-accent flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors disabled:pointer-events-none disabled:opacity-50 data-[selected=true]:border-primary"
+                        data-selected={isSelected}
+                      >
+                        <Gitlab className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-sm font-medium">
+                              {group.fullPath}
+                            </span>
+                            {isAlreadyImported && (
+                              <Badge variant="secondary" className="shrink-0 text-xs">
+                                Imported
+                              </Badge>
+                            )}
+                            {group.isPrivate ? (
+                              <LockIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                            ) : (
+                              <GlobeIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                            )}
+                          </div>
+                          {group.description && (
+                            <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                              {group.description}
+                            </p>
                           )}
                         </div>
-                        {repo.description && (
-                          <p className="text-muted-foreground mt-0.5 truncate text-xs [text-wrap:auto]">
-                            {repo.description}
-                          </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">BMAD projects</p>
+                  <p className="text-muted-foreground text-xs">
+                    {selectedGroup ? selectedGroup.fullPath : "Select a group to preview"}
+                  </p>
+                </div>
+                {previewing && <LoaderIcon className="h-4 w-4 animate-spin" />}
+              </div>
+
+              <ScrollArea className="mt-3 h-72">
+                <div className="space-y-2">
+                  {previewProjects.map((project) => (
+                    <div key={project.fullName} className="rounded-lg border p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium">
+                          {project.fullName}
+                        </span>
+                        <Badge variant={project.role === "general" ? "default" : "secondary"} className="text-xs">
+                          {project.role}
+                        </Badge>
+                        {project.hasBmad && (
+                          <Badge variant="outline" className="text-xs">
+                            BMAD
+                          </Badge>
                         )}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Branch: {project.defaultBranch}
+                      </p>
+                    </div>
+                  ))}
+                  {!previewing && selectedGroup && previewProjects.length === 0 && !error && (
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      No BMAD projects found
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+
+              <Button
+                className="mt-3 w-full"
+                onClick={handleImport}
+                disabled={!selectedGroup || previewProjects.length === 0 || importing}
+              >
+                {importing ? "Importing..." : "Import group"}
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

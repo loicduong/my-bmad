@@ -13,14 +13,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { deleteRepo } from "@/actions/repo-actions";
+import { deleteBmadGroup, deleteRepo } from "@/actions/repo-actions";
 
 interface DeleteRepoButtonProps {
-  repoId: string;
+  repoId?: string;
+  groupId?: string;
   displayName: string;
 }
 
-export function DeleteRepoButton({ repoId, displayName }: DeleteRepoButtonProps) {
+export function DeleteRepoButton({ repoId, groupId, displayName }: DeleteRepoButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -30,7 +31,9 @@ export function DeleteRepoButton({ repoId, displayName }: DeleteRepoButtonProps)
     setDeleting(true);
     setError(null);
     try {
-      const result = await deleteRepo({ repoId });
+      const result = groupId
+        ? await deleteBmadGroup({ groupId })
+        : await deleteRepo({ repoId: repoId! });
       if (result.success) {
         setOpen(false);
         router.push("/");

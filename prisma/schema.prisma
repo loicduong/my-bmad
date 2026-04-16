@@ -21,6 +21,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   repos         Repo[]
+  bmadGroups    BmadGroup[]
 
   @@map("users")
 }
@@ -75,18 +76,45 @@ model Repo {
   id            String    @id @default(cuid())
   owner         String
   name          String
+  fullPath      String?
   branch        String    @default("main")
   displayName   String
   description   String?
   sourceType    String    @default("gitlab")
+  localPath     String?
+  role          String    @default("member")
   totalFiles    Int?
   lastSyncedAt  DateTime?
+  groupId       String?
+  group         BmadGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   @@unique([userId, sourceType, owner, name])
+  @@unique([userId, sourceType, fullPath])
   @@index([userId])
+  @@index([groupId])
   @@map("repos")
+}
+
+model BmadGroup {
+  id             String    @id @default(cuid())
+  sourceType     String    @default("gitlab")
+  gitlabGroupId  Int
+  fullPath       String
+  name           String
+  displayName    String
+  description    String?
+  lastSyncedAt   DateTime?
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repos          Repo[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([userId, sourceType, fullPath])
+  @@index([userId])
+  @@map("bmad_groups")
 }

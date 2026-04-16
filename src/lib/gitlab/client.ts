@@ -21,7 +21,23 @@ export interface GitLabRepo {
   hasBmad: boolean;
 }
 
+export interface GitLabGroup {
+  id: number;
+  name: string;
+  fullPath: string;
+  description: string | null;
+  isPrivate: boolean;
+  webUrl: string;
+}
+
+export type GitLabBmadProject = GitLabRepo & {
+  role: "general" | "member";
+};
+
 const CACHE_TTL = 300;
+const BMAD_OUTPUT = "_bmad-output";
+const BMAD_CORE = "_bmad";
+const GENERAL_PROJECT_NAME = "project-general";
 
 function getGitLabIssuer(): string {
   return (process.env.GITLAB_ISSUER || "https://gitlab.com").replace(/\/+$/, "");
@@ -112,6 +128,84 @@ export async function listGitLabProjects(
   }));
 }
 
+function mapGitLabProject(project: {
+  id: number;
+  path: string;
+  path_with_namespace: string;
+  namespace?: { full_path?: string };
+  description: string | null;
+  visibility: string;
+  last_activity_at: string | null;
+  default_branch: string | null;
+}): GitLabRepo {
+  return {
+    id: project.id,
+    fullName: project.path_with_namespace,
+    owner:
+      project.namespace?.full_path ??
+      project.path_with_namespace.split("/").slice(0, -1).join("/"),
+    name: project.path,
+    description: project.description ?? null,
+    isPrivate: project.visibility !== "public",
+    updatedAt: project.last_activity_at ?? "",
+    defaultBranch: project.default_branch ?? "main",
+    hasBmad: false,
+  };
+}
+
+export async function listGitLabGroups(
+  accessToken: string,
+): Promise<GitLabGroup[]> {
+  const groups = await gitLabPaginatedJson<{
+    id: number;
+    name: string;
+    full_path: string;
+    description: string | null;
+    visibility: string;
+    web_url: string;
+  }>(accessToken, "/groups", {
+    min_access_level: 10,
+    top_level_only: false,
+    order_by: "last_activity_at",
+    sort: "desc",
+    per_page: 100,
+  });
+
+  return groups.map((group) => ({
+    id: group.id,
+    name: group.name,
+    fullPath: group.full_path,
+    description: group.description ?? null,
+    isPrivate: group.visibility !== "public",
+    webUrl: group.web_url,
+  }));
+}
+
+export async function listGitLabGroupProjects(
+  accessToken: string,
+  groupFullPathOrId: string | number,
+): Promise<GitLabRepo[]> {
+  const groupId = encodeURIComponent(String(groupFullPathOrId));
+  const projects = await gitLabPaginatedJson<{
+    id: number;
+    path: string;
+    path_with_namespace: string;
+    namespace?: { full_path?: string };
+    description: string | null;
+    visibility: string;
+    last_activity_at: string | null;
+    default_branch: string | null;
+  }>(accessToken, `/groups/${groupId}/projects`, {
+    include_subgroups: true,
+    simple: true,
+    order_by: "last_activity_at",
+    sort: "desc",
+    per_page: 100,
+  });
+
+  return projects.map(mapGitLabProject);
+}
+
 export async function getGitLabRepoTree(
   accessToken: string,
   owner: string,
@@ -127,6 +221,56 @@ export async function getGitLabRepoTree(
       per_page: 100,
       ref: branch,
     },
+  );
+}
+
+function hasRootBmadFolder(tree: GitLabTreeItem[]): boolean {
+  return tree.some(
+    (item) =>
+      item.type === "tree" &&
+      !item.path.includes("/") &&
+      (item.path === BMAD_CORE || item.path === BMAD_OUTPUT),
+  );
+}
+
+export async function detectGitLabBmadProjects(
+  accessToken: string,
+  projects: GitLabRepo[],
+  concurrency = 5,
+): Promise<GitLabBmadProject[]> {
+  const detected: GitLabBmadProject[] = [];
+  let cursor = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, projects.length || 1));
+
+  async function worker() {
+    while (cursor < projects.length) {
+      const project = projects[cursor++];
+      const role = project.name === GENERAL_PROJECT_NAME ? "general" : "member";
+      try {
+        const tree = await getGitLabRepoTree(
+          accessToken,
+          project.owner,
+          project.name,
+          project.defaultBranch,
+        );
+        const hasBmad = hasRootBmadFolder(tree);
+        if (hasBmad || role === "general") {
+          detected.push({ ...project, hasBmad, role });
+        }
+      } catch {
+        if (role === "general") {
+          detected.push({ ...project, hasBmad: false, role });
+        }
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  const order = new Map(projects.map((project, index) => [project.fullName, index]));
+  return detected.sort(
+    (a, b) =>
+      (a.role === "general" ? -1 : 0) - (b.role === "general" ? -1 : 0) ||
+      (order.get(a.fullName) ?? 0) - (order.get(b.fullName) ?? 0),
   );
 }
 

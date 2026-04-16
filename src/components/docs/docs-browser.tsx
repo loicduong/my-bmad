@@ -102,11 +102,13 @@ function FilePanel({
   fileTree,
   secondaryTree,
   repoId,
+  groupId,
   initialSelectedFile,
 }: {
   fileTree: FileTreeNode[];
   secondaryTree?: FileTreeNode[];
   repoId: string;
+  groupId?: string;
   initialSelectedFile?: string;
 }) {
   const [selectedPath, setSelectedPath] = useState<string | null>(
@@ -127,7 +129,15 @@ function FilePanel({
 
     let cancelled = false;
 
-    fetchParsedFileContent({ repoId, path: selectedPath })
+    const [selectedRepoId, selectedFilePath] = selectedPath.includes("::")
+      ? selectedPath.split("::", 2)
+      : [repoId, selectedPath];
+
+    fetchParsedFileContent({
+      repoId: selectedRepoId,
+      groupId,
+      path: selectedFilePath,
+    })
       .then((result) => {
         if (cancelled) return;
         if (result.success) {
@@ -149,7 +159,7 @@ function FilePanel({
     return () => {
       cancelled = true;
     };
-  }, [selectedPath, repoId]);
+  }, [selectedPath, repoId, groupId]);
 
   const hasSecondary = secondaryTree && secondaryTree.length > 0;
   const initialInSecondary =
@@ -299,6 +309,7 @@ interface DocsBrowserProps {
   docsTree: FileTreeNode[];
   bmadCoreTree: FileTreeNode[];
   repoId: string;
+  groupId?: string;
   initialSelectedFile?: string;
 }
 
@@ -307,6 +318,7 @@ export function DocsBrowser({
   docsTree,
   bmadCoreTree,
   repoId,
+  groupId,
   initialSelectedFile,
 }: DocsBrowserProps) {
   const hasDocs = docsTree.length > 0;
@@ -319,6 +331,7 @@ export function DocsBrowser({
         fileTree={fileTree}
         secondaryTree={bmadCoreTree.length > 0 ? bmadCoreTree : undefined}
         repoId={repoId}
+        groupId={groupId}
         initialSelectedFile={initialSelectedFile}
       />
     );
@@ -329,6 +342,7 @@ export function DocsBrowser({
       <FilePanel
         fileTree={docsTree}
         repoId={repoId}
+        groupId={groupId}
         initialSelectedFile={initialSelectedFile}
       />
     );
@@ -358,6 +372,7 @@ export function DocsBrowser({
           fileTree={fileTree}
           secondaryTree={bmadCoreTree.length > 0 ? bmadCoreTree : undefined}
           repoId={repoId}
+          groupId={groupId}
           initialSelectedFile={initialInDocs ? undefined : initialSelectedFile}
         />
       </TabsContent>
@@ -366,6 +381,7 @@ export function DocsBrowser({
         <FilePanel
           fileTree={docsTree}
           repoId={repoId}
+          groupId={groupId}
           initialSelectedFile={initialInDocs ? initialSelectedFile : undefined}
         />
       </TabsContent>

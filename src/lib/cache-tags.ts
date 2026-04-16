@@ -8,6 +8,11 @@ export function repoTag(sourceType: string, fullName: string) {
   return `repo:${sourceType}:${fullName}`;
 }
 
+/** Tag for an imported BMAD group workspace. */
+export function groupTag(sourceType: string, fullPath: string) {
+  return `group:${sourceType}:${fullPath}`;
+}
+
 /** Tag for a specific file's content cache. */
 export function fileTag(sourceType: string, fullName: string, path: string) {
   return `file:${sourceType}:${fullName}:${path}`;

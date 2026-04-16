@@ -110,3 +110,21 @@ export interface BmadProject {
   inProgressStories: number;
   progressPercent: number;
 }
+
+export interface BmadRepoBreakdown {
+  repoId: string;
+  repoFullPath: string;
+  repoRole: import("@/lib/types").RepoRole;
+  displayName: string;
+  branch: string;
+  totalStories: number;
+  completedStories: number;
+  progressPercent: number;
+  error: string | null;
+}
+
+export interface BmadWorkspace extends BmadProject {
+  groupFullPath: string;
+  reposCount: number;
+  repoBreakdown: BmadRepoBreakdown[];
+}

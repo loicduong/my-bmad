@@ -12,6 +12,7 @@ interface EpicsListProps {
   epics: Epic[];
   sourceType: SourceType;
   repoId: string;
+  hrefBase?: string;
 }
 
 const statusBorderColor: Record<string, string> = {
@@ -24,7 +25,7 @@ function getProgressColor(percent: number) {
   return percent >= 100 ? "bg-success" : "bg-warning";
 }
 
-export function EpicsList({ epics, sourceType, repoId }: EpicsListProps) {
+export function EpicsList({ epics, sourceType, repoId, hrefBase }: EpicsListProps) {
   if (epics.length === 0) {
     return (
       <Card className="glass-card">
@@ -50,7 +51,7 @@ export function EpicsList({ epics, sourceType, repoId }: EpicsListProps) {
           {sorted.map((epic) => (
             <Link
               key={epic.id}
-              href={getRepoHref(sourceType, repoId, "epics")}
+              href={hrefBase ?? getRepoHref(sourceType, repoId, "epics")}
               className={cn(
                 "flex items-center justify-between rounded-lg border border-border/50 border-l-3 p-3 transition-colors duration-300 hover:bg-accent/50",
                 statusBorderColor[epic.status] ?? "border-l-muted-foreground",
