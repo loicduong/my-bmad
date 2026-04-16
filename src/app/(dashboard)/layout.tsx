@@ -36,7 +36,9 @@ export default async function DashboardLayout({
         />
         <SidebarInset>
           <AppHeader />
-          <div className="flex-1 pt-4 pr-4 pb-4">{children}</div>
+          <div className="min-w-0 max-w-full flex-1 overflow-x-hidden pt-4 pr-4 pb-4">
+            {children}
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </BreadcrumbProvider>

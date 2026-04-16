@@ -179,7 +179,7 @@ function FilePanel({
   }
 
   return (
-    <StaggeredList className="flex min-h-full gap-4" staggerDelay={0.1}>
+    <StaggeredList className="flex min-h-full w-full max-w-full gap-4" staggerDelay={0.1}>
       <StaggeredItem className="min-h-full">
       <Card className="glass-card min-h-full w-64 shrink-0 overflow-hidden">
         <ScrollArea className="p-3 [&_[data-slot=scroll-area-viewport]>div]:block!">
@@ -220,9 +220,9 @@ function FilePanel({
       </Card>
       </StaggeredItem>
 
-      <StaggeredItem className="min-h-full flex-1">
-      <Card className="glass-card min-h-full overflow-hidden">
-        <ScrollArea className="p-6">
+      <StaggeredItem className="min-h-full min-w-0 flex-1">
+      <Card className="glass-card min-h-full w-full min-w-0 max-w-full overflow-hidden">
+        <ScrollArea className="w-full min-w-0 max-w-full p-6 [&_[data-slot=scroll-area-viewport]>div]:block!">
           <div aria-live="polite">
             {loading ? (
               <div className="flex min-h-64 items-center justify-center text-muted-foreground">

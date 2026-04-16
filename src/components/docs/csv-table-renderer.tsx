@@ -23,7 +23,7 @@ export function CsvTableRenderer({ csv }: { csv: CsvData }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="w-full min-w-0 max-w-full space-y-3">
       {(csv.truncated || csv.parseErrors.length > 0) && (
         <div
           className="rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm"
@@ -49,8 +49,8 @@ export function CsvTableRenderer({ csv }: { csv: CsvData }) {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border">
-        <div className="max-h-160 overflow-auto">
+      <div className="w-full min-w-0 max-w-full overflow-hidden rounded-lg border">
+        <div className="w-full min-w-0 max-w-full overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm">
             {hasHeader && (
               <thead className="sticky top-0 z-10 bg-muted">
