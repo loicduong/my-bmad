@@ -179,10 +179,10 @@ function FilePanel({
   }
 
   return (
-    <StaggeredList className="flex gap-4 h-[calc(100vh-17rem)]" staggerDelay={0.1}>
-      <StaggeredItem>
-      <Card className="glass-card w-64 shrink-0 overflow-hidden h-full">
-        <ScrollArea className="h-full p-3 [&_[data-slot=scroll-area-viewport]>div]:block!">
+    <StaggeredList className="flex min-h-full gap-4" staggerDelay={0.1}>
+      <StaggeredItem className="min-h-full">
+      <Card className="glass-card min-h-full w-64 shrink-0 overflow-hidden">
+        <ScrollArea className="p-3 [&_[data-slot=scroll-area-viewport]>div]:block!">
           {hasSecondary ? (
             <div className="space-y-2">
               <CollapsibleSection
@@ -220,17 +220,17 @@ function FilePanel({
       </Card>
       </StaggeredItem>
 
-      <StaggeredItem className="flex-1">
-      <Card className="glass-card overflow-hidden h-full">
-        <ScrollArea className="h-full p-6">
+      <StaggeredItem className="min-h-full flex-1">
+      <Card className="glass-card min-h-full overflow-hidden">
+        <ScrollArea className="p-6">
           <div aria-live="polite">
             {loading ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex min-h-64 items-center justify-center text-muted-foreground">
                 Loading...
               </div>
             ) : error ? (
               <div
-                className="flex flex-col items-center justify-center h-full gap-3"
+                className="flex min-h-64 flex-col items-center justify-center gap-3"
                 role="alert"
               >
                 {error.includes("Limite") ? (
@@ -294,7 +294,7 @@ function FilePanel({
                 )}
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
+              <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
                 <FileText className="h-12 w-12 opacity-30" />
                 <p>Select a file from the tree to view its content</p>
               </div>
