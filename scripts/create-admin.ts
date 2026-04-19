@@ -11,6 +11,8 @@ import "dotenv/config";
  * ALLOW_REGISTRATION=true for the duration of the script.
  */
 
+import "dotenv/config";
+
 // Force registration on for this script
 process.env.ALLOW_REGISTRATION = "true";
 
