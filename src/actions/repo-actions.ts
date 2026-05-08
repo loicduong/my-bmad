@@ -11,6 +11,12 @@ import {
 import { LocalProvider } from "@/lib/content-provider/local-provider";
 import { buildFileTree } from "@/lib/bmad/utils";
 import { parseBmadFile } from "@/lib/bmad/parser";
+import {
+  getBmadConfig,
+  resolveBmadOutputDir,
+  isPathOutsideNestedOutput,
+  DEFAULT_OUTPUT_DIR,
+} from "@/lib/bmad/parse-config";
 import { prisma } from "@/lib/db/client";
 import { getAuthenticatedSession } from "@/lib/db/helpers";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
@@ -26,7 +32,6 @@ import { checkRateLimit } from "@/lib/rate-limit";
 // GraphQL can handle ~30 repos per query safely (GitHub complexity limits)
 const GRAPHQL_BATCH_SIZE = 30;
 
-const BMAD_OUTPUT = "_bmad-output";
 const BMAD_CORE = "_bmad";
 
 // ---------------------------------------------------------------------------
@@ -363,8 +368,12 @@ async function refreshLocalRepo(
     const provider = new LocalProvider(repoConfig.localPath);
     await provider.validateRoot();
 
-    const tree = await provider.getTree();
-    const totalFiles = tree.paths.filter((p) => p.startsWith("_bmad-output/")).length;
+    const initialTree = await provider.getTree();
+    const { outputDir, paths } = await resolveBmadOutputDir(
+      provider,
+      initialTree.paths,
+    );
+    const totalFiles = paths.filter((p) => p.startsWith(outputDir + "/")).length;
 
     const now = new Date();
     await prisma.repo.update({
@@ -409,9 +418,29 @@ async function refreshGitHubRepo(
     recursive: "1",
   });
 
-  const totalFiles = tree.tree.filter(
-    (item) => item.type === "blob" && item.path?.startsWith("_bmad-output/")
-  ).length;
+  const allPaths = tree.tree
+    .filter((item) => item.type === "blob" && typeof item.path === "string")
+    .map((item) => item.path as string);
+
+  const ghProviderShim = {
+    async getTree() {
+      return { paths: allPaths, rootDirectories: [] };
+    },
+    async getFileContent(p: string) {
+      return getCachedUserRawContent(
+        octokit,
+        userId,
+        input.owner,
+        input.name,
+        syncBranch,
+        p,
+      );
+    },
+    async validateRoot() {},
+  };
+  const { outputDir } = await getBmadConfig(ghProviderShim, allPaths);
+
+  const totalFiles = allPaths.filter((p) => p.startsWith(outputDir + "/")).length;
 
   const now = new Date();
   await prisma.repo.update({
@@ -496,17 +525,20 @@ export async function fetchBmadFiles(input: {
 async function fetchBmadFilesLocal(localPath: string) {
   const provider = new LocalProvider(localPath);
   await provider.validateRoot();
-  const providerTree = await provider.getTree();
-  const allPaths = providerTree.paths;
+  const initialTree = await provider.getTree();
+  const { outputDir, paths: allPaths } = await resolveBmadOutputDir(
+    provider,
+    initialTree.paths,
+  );
 
-  const bmadPaths = allPaths.filter((p) => p.startsWith(BMAD_OUTPUT + "/"));
-  const fileTree = buildFileTree(bmadPaths, BMAD_OUTPUT);
+  const bmadPaths = allPaths.filter((p) => p.startsWith(outputDir + "/"));
+  const fileTree = buildFileTree(bmadPaths, outputDir);
 
   const bmadCorePaths = allPaths.filter((p) => p.startsWith(BMAD_CORE + "/"));
   const bmadCoreTree = buildFileTree(bmadCorePaths, BMAD_CORE);
 
   // F20/F35: Detect docs/ via rootDirectories
-  const docsFolderName = providerTree.rootDirectories.find(
+  const docsFolderName = initialTree.rootDirectories.find(
     (d) => d.toLowerCase() === "docs"
   ) ?? null;
   const docsTree = docsFolderName
@@ -538,12 +570,30 @@ async function fetchBmadFilesGitHub(
     branch,
   );
 
-  const allPaths = tree.tree
-    .filter((item) => item.type === "blob")
-    .map((item) => item.path);
+  const allPaths: string[] = tree.tree
+    .filter((item) => item.type === "blob" && typeof item.path === "string")
+    .map((item) => item.path as string);
 
-  const bmadPaths = allPaths.filter((p) => p.startsWith(BMAD_OUTPUT + "/"));
-  const fileTree = buildFileTree(bmadPaths, BMAD_OUTPUT);
+  const ghProviderShim = {
+    async getTree() {
+      return { paths: allPaths, rootDirectories: [] };
+    },
+    async getFileContent(p: string) {
+      return getCachedUserRawContent(
+        octokit,
+        userId,
+        input.owner,
+        input.name,
+        branch,
+        p,
+      );
+    },
+    async validateRoot() {},
+  };
+  const { outputDir } = await getBmadConfig(ghProviderShim, allPaths);
+
+  const bmadPaths = allPaths.filter((p) => p.startsWith(outputDir + "/"));
+  const fileTree = buildFileTree(bmadPaths, outputDir);
 
   const bmadCorePaths = allPaths.filter((p) => p.startsWith(BMAD_CORE + "/"));
   const bmadCoreTree = buildFileTree(bmadCorePaths, BMAD_CORE);
@@ -627,7 +677,34 @@ export async function fetchFileContent(input: {
         return { success: false, error: sanitizeError(null, "FS_ERROR"), code: "FS_ERROR" };
       }
       const provider = new LocalProvider(repoConfig.localPath);
-      content = await provider.getFileContent(parsed.data.path);
+      // The default LocalProvider whitelist covers `_bmad` and `_bmad-output`.
+      // When the project declares a custom (possibly nested) `output_folder`,
+      // we extend the whitelist to its top-level segment so the provider can
+      // read inside it — but the provider only validates by single segment.
+      // Re-check the requested path here so a nested config like
+      // `output_folder: custom/out` cannot be used to read `custom/secret.txt`.
+      const tree = await provider.getTree();
+      const { outputDir } = await getBmadConfig(provider, tree.paths);
+      const requestedPath = parsed.data.path;
+      if (
+        outputDir !== DEFAULT_OUTPUT_DIR &&
+        isPathOutsideNestedOutput(requestedPath, outputDir)
+      ) {
+        return {
+          success: false,
+          error: sanitizeError(null, "ACCESS_DENIED"),
+          code: "ACCESS_DENIED",
+        };
+      }
+      if (outputDir !== DEFAULT_OUTPUT_DIR) {
+        const topSegment = outputDir.split("/")[0];
+        try {
+          provider.extendBmadDirs(topSegment);
+        } catch {
+          // Validation failed — fall through; getFileContent will deny if needed.
+        }
+      }
+      content = await provider.getFileContent(requestedPath);
     } else {
       const token = await getGitHubToken(userId);
       if (!token) {
@@ -769,8 +846,12 @@ export async function importLocalFolder(input: {
     // F11: displayName fallback to raw basename
     const displayName = parsed.data.displayName ?? rawBasename;
 
-    const bmadOutputCount = providerTree.paths.filter(
-      (p) => p.startsWith("_bmad-output/")
+    const { outputDir, paths: scannedPaths } = await resolveBmadOutputDir(
+      provider,
+      providerTree.paths,
+    );
+    const bmadOutputCount = scannedPaths.filter((p) =>
+      p.startsWith(outputDir + "/"),
     ).length;
 
     const repo = await prisma.repo.create({
