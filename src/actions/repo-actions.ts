@@ -32,6 +32,15 @@ import { checkRateLimit } from "@/lib/rate-limit";
 // GraphQL can handle ~30 repos per query safely (GitHub complexity limits)
 const GRAPHQL_BATCH_SIZE = 30;
 
+// Upper bound on the number of repos a single detectBmadRepos call may
+// process. Each batch above this issues an additional sequential GraphQL
+// request, draining the user's GitHub rate quota and blocking the event
+// loop. 2000 covers virtually every realistic GitHub account (orgs
+// included) while still preventing accidental or hostile amplification.
+// Callers that need to detect against larger lists should chunk
+// client-side and aggregate the results.
+const MAX_DETECT_REPOS = 2000;
+
 const BMAD_CORE = "_bmad";
 
 // ---------------------------------------------------------------------------
@@ -138,6 +147,14 @@ export async function detectBmadRepos(
 ): Promise<ActionResult<Record<string, boolean>>> {
   const authResult = await getAuthenticatedOctokit();
   if (!authResult.success) return authResult;
+
+  if (repoIds.length > MAX_DETECT_REPOS) {
+    return {
+      success: false,
+      error: `Too many repositories (max ${MAX_DETECT_REPOS})`,
+      code: "LIMIT_EXCEEDED",
+    };
+  }
 
   const { octokit } = authResult.data;
   const results: Record<string, boolean> = {};
@@ -918,12 +935,19 @@ export async function listRepoBranches(input: {
     return { success: false, error: "Invalid input", code: "VALIDATION" };
   }
 
-  // F21: Guard — local repos don't have branches
+  // Scope guard: the repo must belong to the authenticated user before we
+  // proxy a GitHub call on their behalf. Without this, a null repoConfig
+  // (repo not registered for this user) silently falls through to the
+  // GitHub API using user-supplied owner/name.
   const repoConfig = await prisma.repo.findFirst({
     where: { userId, owner: parsed.data.owner, name: parsed.data.name },
     select: { sourceType: true },
   });
-  if (repoConfig?.sourceType === "local") {
+  if (!repoConfig) {
+    return { success: false, error: "Repository not found", code: "NOT_FOUND" };
+  }
+  // F21: Local repos don't have branches
+  if (repoConfig.sourceType === "local") {
     return { success: false, error: "Branch management is not available for local projects", code: "NOT_APPLICABLE" };
   }
 
